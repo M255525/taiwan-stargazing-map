@@ -21,7 +21,7 @@
 ## 配套
 - ✅ 跑馬燈（`taiwanStarMarquee`）、manual、使用警語（底部＋首訪自動跳，`taiwanStarSeenWarning`）、⚙常用設定收合式（`taiwanStarSettings`；展開 `taiwanStarSetOpen`）、偏好 `taiwanStarPrefs`、PWA（改 js 記得 `CACHE_NAME` +1）、訪客計數器 `page_id=m255525.taiwanstargazingmap`、RWD（375px 無橫向捲動；手機日期條可橫向捲動）。
 - ❌ 序號授權
-- GitHub Pages：`master`＋`.github/workflows/deploy-pages.yml`，https://m255525.github.io/taiwan-stargazing-map/ （repo 由使用者自己 `gh repo create`，Pages 由 Claude 用 `gh api` 開啟；push 觸發的部署即會成功）。
+- GitHub Pages（**2026-11-12 已上線**）：`master`＋`.github/workflows/deploy-pages.yml`，https://m255525.github.io/taiwan-stargazing-map/ （repo 由使用者自己 `gh repo create`，Pages 由 Claude 用 `gh api` 開啟；push 觸發的部署即會成功）。
 
 ## Port／測試
 - port **8872**（`.claude/launch.json` 的 `taiwan-stargazing-map`）。
