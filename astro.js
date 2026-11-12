@@ -37,6 +37,9 @@ function moon(J){
 function gmst(J){ var T = (J - 2451545) / 36525; return norm(280.46061837 + 360.98564736629 * (J - 2451545) + .000387933 * T * T); }
 function alt(J, lat, lon, ra, dec){ var H = gmst(J) + lon - ra; return Math.asin(sin(lat) * sin(dec) + cos(lat) * cos(dec) * cos(H)) * R2D; }
 AS.alt = alt;
+AS.lst = function(ms, lon){ return norm(gmst(jd(ms)) + lon); };                          // 地方恆星時（度）
+AS.moonEq = function(ms){ var m = moon(jd(ms)); return {ra:m.ra, dec:m.dec}; };           // 月亮赤經赤緯（地心）
+AS.sunAlt = function(ms, lat, lon){ var J = jd(ms), s = sun(J); return alt(J, lat, lon, s.ra, s.dec); };
 var GC = {ra:266.405, dec:-28.936};   // 銀河中心（人馬座 A*），J2000
 AS.GC = GC;
 

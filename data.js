@@ -306,3 +306,56 @@ SM.ISLANDS = [
   {id:'guishan',name:'龜山島', c:[121.952,24.842], km:1.7, sx:1.5, sy:.8},
   {id:'keelungi',name:'', c:[121.786,25.192], km:.8}
 ];
+
+/* ---------- 亮星與星座（J2000 赤經、赤緯，度；星等）：3D 天球用 ----------
+ * 座標取自常見星表（取到小數兩位），誤差遠小於畫面需要；name 有值的會在 3D 星空標名稱；第 6 欄 r／o＝偏紅／偏橙。 */
+SM.STARS = [
+  ['betelgeuse','參宿四',88.79,7.41,.5,'r'],['rigel','參宿七',78.63,-8.20,.13],['bellatrix','',81.28,6.35,1.6],['saiph','',86.94,-9.67,2.1],
+  ['alnitak','',85.19,-1.94,1.8],['alnilam','',84.05,-1.20,1.7],['mintaka','',83.00,-.30,2.2],['meissa','',83.78,9.93,3.4],
+  ['dubhe','',165.93,61.75,1.8],['merak','',165.46,56.38,2.4],['phecda','',178.46,53.69,2.4],['megrez','',183.86,57.03,3.3],
+  ['alioth','',193.51,55.96,1.8],['mizar','',200.98,54.93,2.2],['alkaid','',206.89,49.31,1.9],['polaris','北極星',37.95,89.26,2.0],
+  ['caph','',2.29,59.15,2.3],['schedar','',10.13,56.54,2.2],['gcas','',14.18,60.72,2.2],['ruchbah','',21.45,60.24,2.7],['segin','',28.60,63.67,3.4],
+  ['acrab','',241.36,-19.81,2.6],['dschubba','',240.08,-22.62,2.3],['pisco','',239.71,-26.11,2.9],['sigsco','',245.30,-25.59,2.9],
+  ['antares','心宿二',247.35,-26.43,1.0,'r'],['tausco','',248.97,-28.22,2.8],['epssco','',252.54,-34.29,2.3],['mu1sco','',252.97,-38.05,3.0],
+  ['zetsco','',254.66,-42.36,3.6],['etasco','',258.04,-43.24,3.3],['sargas','',264.33,-43.00,1.9],['iotsco','',266.90,-40.13,3.0],
+  ['kapsco','',265.62,-39.03,2.4],['shaula','',263.40,-37.10,1.6],['upssco','',262.69,-37.30,2.7],
+  ['alnasl','',271.45,-30.42,3.0],['kausmed','',275.25,-29.83,2.7],['kausaus','',276.04,-34.38,1.8],['kausbor','',276.99,-25.42,2.8],
+  ['phisgr','',281.41,-26.99,3.2],['nunki','',283.82,-26.30,2.0],['ascella','',285.65,-29.88,2.6],['tausgr','',286.74,-27.67,3.3],
+  ['vega','織女星',279.23,38.78,.03],['epslyr','',281.08,39.67,4.7],['zetlyr','',281.19,37.61,4.3],['sheliak','',282.52,33.36,3.5],
+  ['sulafat','',284.74,32.69,3.2],['dellyr','',283.63,36.90,4.3],
+  ['deneb','天津四',310.36,45.28,1.25],['sadr','',305.56,40.26,2.2],['albireo','',292.68,27.96,3.1],['gienah','',311.55,33.97,2.5],['delcyg','',296.24,45.13,2.9],
+  ['altair','牛郎星',297.70,8.87,.8],['tarazed','',296.56,10.61,2.7],['alshain','',298.83,6.41,3.7],
+  ['sirius','天狼星',101.29,-16.72,-1.46],['mirzam','',95.67,-17.96,2.0],['adhara','',104.66,-28.97,1.5],['wezen','',107.10,-26.39,1.8],['aludra','',111.02,-29.30,2.4],
+  ['procyon','南河三',114.83,5.22,.34],
+  ['aldebaran','畢宿五',68.98,16.51,.85,'r'],['elnath','',81.57,28.61,1.65],['zettau','',84.41,21.14,3.0],['gamtau','',64.95,15.63,3.6],['epstau','',67.15,19.18,3.5],
+  ['pleiades','昴宿星團',56.87,24.11,1.6],
+  ['castor','北河二',113.65,31.89,1.6],['pollux','北河三',116.33,28.03,1.15,'o'],['alhena','',99.43,16.40,1.9],['mebsuta','',100.98,25.13,3.0],
+  ['wasat','',110.03,21.98,3.5],['tejat','',95.74,22.51,2.9],
+  ['regulus','軒轅十四',152.09,11.97,1.35],['denebola','',177.26,14.57,2.1],['algieba','',154.99,19.84,2.0],['zosma','',168.53,20.52,2.6],
+  ['chertan','',168.56,15.43,3.3],['etaleo','',151.83,16.76,3.5],['adhafera','',154.17,23.42,3.4],['muleo','',148.19,26.01,3.9],['epsleo','',146.46,23.77,3.0],
+  ['acrux','',186.65,-63.10,.8],['mimosa','',191.93,-59.69,1.25],['gacrux','',187.79,-57.11,1.6,'r'],['delcru','',183.79,-58.75,2.8],
+  ['markab','',346.19,15.21,2.5],['scheat','',345.94,28.08,2.4],['algenib','',3.31,15.18,2.8],['alpheratz','',2.10,29.09,2.1],
+  ['arcturus','大角星',213.92,19.18,-.05,'o'],['spica','角宿一',201.30,-11.16,1.0],['capella','五車二',79.17,46.00,.08],['canopus','老人星',95.99,-52.70,-.74],
+  ['fomalhaut','北落師門',344.41,-29.62,1.16],['achernar','水委一',24.43,-57.24,.46],['rigilk','南門二',219.90,-60.83,-.27],['hadar','',210.96,-60.37,.6],
+  ['m31','仙女座星系',10.68,41.27,3.4]
+];
+/* 星座連線（lines 是星的 id 兩兩一組）；tri＝星群（夏季／冬季大三角），用淡藍線 */
+SM.CONSTS = [
+  {name:'獵戶座', lines:['betelgeuse','bellatrix','betelgeuse','alnitak','bellatrix','mintaka','mintaka','alnilam','alnilam','alnitak','alnitak','saiph','mintaka','rigel','meissa','betelgeuse','meissa','bellatrix']},
+  {name:'北斗七星', lines:['dubhe','merak','merak','phecda','phecda','megrez','megrez','dubhe','megrez','alioth','alioth','mizar','mizar','alkaid']},
+  {name:'仙后座', lines:['caph','schedar','schedar','gcas','gcas','ruchbah','ruchbah','segin']},
+  {name:'天蠍座', lines:['acrab','dschubba','dschubba','pisco','dschubba','sigsco','sigsco','antares','antares','tausco','tausco','epssco','epssco','mu1sco','mu1sco','zetsco','zetsco','etasco','etasco','sargas','sargas','iotsco','iotsco','kapsco','kapsco','shaula','shaula','upssco']},
+  {name:'人馬座（茶壺）', lines:['alnasl','kausmed','alnasl','kausaus','kausmed','kausaus','kausmed','kausbor','kausbor','phisgr','kausmed','phisgr','kausaus','ascella','ascella','phisgr','phisgr','nunki','nunki','tausgr','tausgr','ascella']},
+  {name:'天琴座', lines:['vega','epslyr','vega','zetlyr','zetlyr','dellyr','dellyr','sulafat','sulafat','sheliak','sheliak','zetlyr']},
+  {name:'天鵝座', lines:['deneb','sadr','sadr','albireo','delcyg','sadr','sadr','gienah']},
+  {name:'天鷹座', lines:['tarazed','altair','altair','alshain']},
+  {name:'大犬座', lines:['mirzam','sirius','sirius','wezen','wezen','adhara','wezen','aludra']},
+  {name:'金牛座', lines:['zettau','aldebaran','aldebaran','gamtau','gamtau','epstau','epstau','elnath']},
+  {name:'雙子座', lines:['castor','pollux','castor','mebsuta','mebsuta','tejat','pollux','wasat','wasat','alhena']},
+  {name:'獅子座', lines:['regulus','etaleo','etaleo','algieba','algieba','adhafera','adhafera','muleo','muleo','epsleo','algieba','zosma','zosma','denebola','denebola','chertan','chertan','regulus']},
+  {name:'南十字座', lines:['gacrux','acrux','mimosa','delcru']},
+  {name:'飛馬座大四邊形', lines:['markab','scheat','scheat','alpheratz','alpheratz','algenib','algenib','markab']},
+  {name:'夏季大三角', tri:true, lines:['vega','deneb','deneb','altair','altair','vega']},
+  {name:'冬季大三角', tri:true, lines:['betelgeuse','sirius','sirius','procyon','procyon','betelgeuse']}
+];
+SM.starById = {}; SM.STARS.forEach(function(s){ SM.starById[s[0]] = s; });

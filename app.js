@@ -13,7 +13,7 @@ function tonight(){ var t = new Date(Date.now() + 8 * 3600000 - 6 * 3600000); re
 function wday(y, m, d){ return WD[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]; }
 function fmtH(h){ return h < .05 ? '0' : h.toFixed(1); }
 
-var set = Object.assign({date:'today', labels:true, layer:true, motion:'auto', theme:'auto', play:900, red:false}, lsGet(SET_KEY, {}));
+var set = Object.assign({date:'today', labels:true, layer:true, motion:'auto', theme:'auto', play:900, red:false, sky:true}, lsGet(SET_KEY, {}));
 var pref = lsGet(PREF_KEY, {});
 var t0 = tonight();
 var st = {y:t0.y, m:t0.m, d:t0.d, region:SM.regionById[pref.region] ? pref.region : 'all', spot:SM.spotById[pref.spot] ? pref.spot : null, layer:set.layer !== false};
@@ -115,26 +115,29 @@ function renderAxis(){
 /* ---------- 清單 ---------- */
 function spotCard(p){
   var r = SM.score(p, st.y, st.m, st.d), h = hlNow(p, st.m).filter(function(x){ return x[0] !== '全年'; });
-  return '<button type="button" class="scard" data-spot="' + p.id + '"><b>' + SM.TYPES[p.type].icon + ' ' + esc(p.name) + '</b>' + scoreChip(r.score) +
+  var vn = spotLogs(p.id).length;
+  return '<button type="button" class="scard" data-spot="' + p.id + '"><b>' + SM.TYPES[p.type].icon + ' ' + esc(p.name) + (vn ? ' <span class="visited" title="你在這裡觀星過 ' + vn + ' 次">★' + vn + '</span>' : '') + '</b>' + scoreChip(r.score) +
     '<small>' + (certShort(p) ? '<span class="cert">★ ' + certShort(p) + '</span> ' : '') + esc(p.city.replace(/（.*）/, '')) + '・海拔約 ' + p.elev.toLocaleString() + ' m・光害' + SM.LP[p.lp].name +
     (r.why.length ? '｜' + r.why.join('、') : '') + (h.length ? '<br>' + h.map(function(x){ return x[1] + ' ' + esc(x[2]); }).join('　') : '') + '</small></button>';
 }
 function nightBox(n, fc){
+  var selMs = skyNow();
   var tl = function(ms){ return ms ? AS.hm(ms) : '—'; };
   var mr = n.mrise ? AS.hm(n.mrise) : '（白天已升起）', ms = n.mset ? AS.hm(n.mset) : '（隔天中午後）';
   return '<div class="nbox"><div class="mbig">' + AS.moonSvg(n.illum, n.waxing, 46) + '<div><b>' + n.phase + '</b><small>月齡 ' + n.age.toFixed(1) + '・亮 ' + Math.round(n.illum * 100) + '%</small></div></div>' +
     '<dl><dt>天黑（天文昏影終）</dt><dd>' + tl(n.dusk) + '</dd><dt>天亮（天文晨光始）</dt><dd>' + tl(n.dawn) + '</dd>' +
     '<dt>月出／月落</dt><dd>' + mr + '／' + ms + '</dd>' +
     '<dt>無月暗夜</dt><dd><b>' + fmtH(n.darkH) + ' 小時</b>' + (n.darkFrom ? '（' + AS.hm(n.darkFrom) + '～' + AS.hm(n.darkTo) + '）' : '') + '</dd>' +
-    '<dt>銀河核心</dt><dd>' + (n.gcH > 0 ? '<b>' + fmtH(n.gcH) + ' 小時</b>（' + AS.hm(n.gcFrom) + '～' + AS.hm(n.gcTo) + '，南方）' : '暗夜時段看不到') + '</dd></dl>' + timeline(n, fc) + '</div>';
+    '<dt>銀河核心</dt><dd>' + (n.gcH > 0 ? '<b>' + fmtH(n.gcH) + ' 小時</b>（' + AS.hm(n.gcFrom) + '～' + AS.hm(n.gcTo) + '，南方）' : '暗夜時段看不到') + '</dd></dl>' + timeline(n, fc, selMs) + '</div>';
 }
 /* 今晚逐小時時間軸：18:00～隔天 06:00，每 5 分鐘一格 */
-function timeline(n, fc){
+function timeline(n, fc, selMs){
   var S = n.samp; if (!S) return '';
   var I0 = 72, I1 = 216, W = I1 - I0;                  // 中午起第 72 格＝18:00
   var moonA = (.25 + .75 * n.illum).toFixed(2);
   var nowMark = '', now = Date.now(), i0ms = n.t0 + I0 * n.step;
   if (now >= i0ms && now <= n.t0 + I1 * n.step) nowMark = '<i class="now" style="left:' + ((now - i0ms) / (W * n.step) * 100).toFixed(2) + '%" title="現在"></i>';
+  var selMark = selMs ? '<i class="sel" style="left:' + ((selMs - i0ms) / (W * n.step) * 100).toFixed(2) + '%"></i>' : '';
   function skyC(a){ return a > 0 ? '#5d82c4' : a > -6 ? '#3b5191' : a > -12 ? '#28376f' : a > -18 ? '#1a2350' : '#060a1a'; }
   function row(fn){                                    // 連續同色的格子合併成一個矩形
     var out = '', cur = null, from = 0;
@@ -142,7 +145,7 @@ function timeline(n, fc){
       var c = i < I1 ? fn(i) : null;
       if (c !== cur){ if (cur) out += '<rect x="' + (from - I0) + '" y="0" width="' + (i - from) + '" height="1" fill="' + cur + '"/>'; cur = c; from = i; }
     }
-    return '<div class="bar"><svg viewBox="0 0 ' + W + ' 1" preserveAspectRatio="none" aria-hidden="true">' + out + '</svg>' + nowMark + '</div>';
+    return '<div class="bar"><svg viewBox="0 0 ' + W + ' 1" preserveAspectRatio="none" aria-hidden="true">' + out + '</svg>' + nowMark + selMark + '</div>';
   }
   var dark = function(i){ return S.sun[i] < -18 && (S.moon[i] <= -.6 || n.illum < .06); };
   var ticks = [18, 20, 22, 0, 2, 4, 6].map(function(h, k){ return '<span style="left:' + (k / 6 * 100).toFixed(2) + '%">' + ('0' + h).slice(-2) + '</span>'; }).join('');
@@ -156,7 +159,7 @@ function timeline(n, fc){
       return c == null ? null : 'rgba(205,214,236,' + (Math.round(c / 10) / 10 * .85).toFixed(2) + ')';
     }) : '') +
     '<span></span><div class="ticks">' + ticks + '</div></div>' +
-    '<div class="tlnote"><i style="background:#060a1a;border:1px solid #445"></i>全黑<i style="background:rgba(255,240,200,' + moonA + ')"></i>月亮在天上<i style="background:#e6c36a"></i>無月暗夜<i style="background:#b8a6ff"></i>銀河核心（南方）' + (fc ? '<i style="background:rgba(205,214,236,.8)"></i>雲越白越多（預報）' : '') + (nowMark ? '<i style="background:var(--red);width:3px"></i>現在' : '') + '</div>';
+    '<div class="tlnote"><i style="background:#060a1a;border:1px solid #445"></i>全黑<i style="background:rgba(255,240,200,' + moonA + ')"></i>月亮在天上<i style="background:#e6c36a"></i>無月暗夜<i style="background:#b8a6ff"></i>銀河核心（南方）' + (fc ? '<i style="background:rgba(205,214,236,.8)"></i>雲越白越多（預報）' : '') + (nowMark ? '<i style="background:var(--red);width:3px"></i>現在' : '') + (selMark ? '<i style="background:#fff;width:3px"></i>3D 星空的時間' : '') + '</div>';
 }
 /* 今晚的行星 */
 function fmtMag(m){ return (m < 0 ? '−' : '') + Math.abs(m).toFixed(1); }
@@ -171,6 +174,57 @@ function planetBox(lat, lon){
     (hid.length ? '<div class="plh">看不到：' + hid.map(function(p){ return p.name + '（' + p.why + '）'; }).join('、') + '</div>' : '') + '</div>';
 }
 function planetNames(){ return AS.planets(st.y, st.m, st.d).filter(function(p){ return p.visible && p.bestAlt >= 15; }).map(function(p){ return p.name; }); }
+/* ---------- 3D 星空時間：預設＝今晚的現在，或銀河／暗夜最好的時間；滑桿 18:00～06:00 ---------- */
+var skyLive = false, skyPlayT = 0, skyLiveT = 0;
+function curNight(){ var sp = st.spot ? SM.spotById[st.spot] : null; return sp ? AS.night(st.y, st.m, st.d, sp.at[1], sp.at[0]) : AS.night(st.y, st.m, st.d); }
+function skyLatLon(){ var sp = st.spot ? SM.spotById[st.spot] : null; return sp ? [sp.at[1], sp.at[0]] : [23.7, 121.0]; }
+function skyNow(){
+  var n = curNight();
+  if (st.skyMs != null){ skyLive = false; return st.skyMs; }
+  var now = Date.now();
+  if (now >= n.t0 + 6 * 3600000 && now <= n.t0 + 18 * 3600000){ skyLive = true; return now; }
+  skyLive = false;
+  return n.gcH > 0 ? (n.gcFrom + n.gcTo) / 2 : n.darkH > 0 ? (n.darkFrom + n.darkTo) / 2 : n.t0 + 10 * 3600000;
+}
+function skyIdx(n, ms){ return Math.max(72, Math.min(216, Math.round((ms - n.t0) / n.step))); }
+function skyDesc(n, ms){
+  var i = skyIdx(n, ms), S = n.samp, sa = S.sun[i], up = S.moon[i] > -.6 && n.illum > .06, dk = sa < -18 && !up;
+  return (sa > -6 ? '天色還亮' : sa > -18 ? '微光中' : up ? '月亮在天上' : '全黑') + (dk && S.gc[i] > 10 ? '・銀河核心在南方 ' + Math.round(S.gc[i]) + '°' : '');
+}
+function skyBox(){
+  var n = curNight(), ms = skyNow(), look = window.StarScene && StarScene.isLookUp && StarScene.isLookUp(), tn = tonight(), isT = st.y === tn.y && st.m === tn.m && st.d === tn.d;
+  return '<div class="skyt"><div class="skyrow"><b>🌌 3D 星空</b><span id="skyClock">' + skyClockText(n, ms) + '</span></div>' +
+    '<input type="range" id="skyRange" min="72" max="216" step="1" value="' + skyIdx(n, ms) + '" aria-label="3D 星空顯示的時間（18:00～隔天 06:00）">' +
+    '<div class="skybtns"><button type="button" class="abtn" data-sky="play">' + (skyPlayT ? '❚❚ 暫停' : '▶ 看整晚轉動') + '</button>' +
+    (isT ? '<button type="button" class="abtn" data-sky="now">🕘 現在</button>' : '') +
+    (st.spot ? '<button type="button" class="abtn' + (look ? ' on' : '') + '" data-sky="look" aria-pressed="' + (look ? 'true' : 'false') + '">🔭 ' + (look ? '回到俯瞰' : '仰望星空') + '</button>' : '') + '</div>' +
+    '<div class="skyhint">' + (st.spot ? (look ? '拖曳畫面可以環顧四周（預設面向南方）；星座、亮星、行星與銀河都在這個時間的實際位置。' : '按「仰望星空」從觀星點抬頭看；拖曳時間條看星空整晚怎麼轉。') :
+      '選一個觀星點再按「仰望星空」，能看到星座、行星與銀河在天上的實際位置。') + '</div></div>';
+}
+function skyClockText(n, ms){ return AS.hm(ms) + (skyLive ? '（現在）' : '') + '・' + skyDesc(n, ms); }
+function pushSky(){ if (!window.StarScene) return; var ll = skyLatLon(); StarScene.setSky(skyNow(), ll[0], ll[1]); }
+function updateSkyUI(){
+  var n = curNight(), ms = skyNow(), i0ms = n.t0 + 72 * n.step, left = ((ms - i0ms) / (144 * n.step) * 100).toFixed(2) + '%';
+  var c = $('skyClock'); if (c) c.textContent = skyClockText(n, ms);
+  var r = $('skyRange'); if (r && document.activeElement !== r) r.value = skyIdx(n, ms);
+  document.querySelectorAll('.tl .sel').forEach(function(el){ el.style.left = left; });
+  pushSky();
+}
+function setSkyIdx(i){ var n = curNight(); st.skyMs = n.t0 + i * n.step; updateSkyUI(); }
+function stopSkyPlay(){ if (!skyPlayT) return; clearInterval(skyPlayT); skyPlayT = 0; var b = document.querySelector('[data-sky="play"]'); if (b) b.textContent = '▶ 看整晚轉動'; }
+function startSkyPlay(){
+  var n = curNight(), i = skyIdx(n, skyNow()); if (i >= 214) i = 72;
+  skyPlayT = setInterval(function(){ if (++i > 216){ stopSkyPlay(); return; } setSkyIdx(i); }, 110);
+  var b = document.querySelector('[data-sky="play"]'); if (b) b.textContent = '❚❚ 暫停';
+}
+function toggleLook(){
+  if (!window.StarScene || !StarScene.ready) return;
+  var on = StarScene.lookUp(!StarScene.isLookUp());
+  if (on && innerWidth <= 760) setSheet(true);
+  var b = document.querySelector('[data-sky="look"]');
+  if (b){ b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.textContent = '🔭 ' + (on ? '回到俯瞰' : '仰望星空'); }
+  var h = document.querySelector('.skyhint'); if (h) h.textContent = on ? '拖曳畫面可以環顧四周（預設面向南方）；星座、亮星、行星與銀河都在這個時間的實際位置。' : '按「仰望星空」從觀星點抬頭看；拖曳時間條看星空整晚怎麼轉。';
+}
 function showerBox(){
   var sh = SM.showersNear(st.y, st.m, st.d);
   if (!sh.length) return '';
@@ -240,7 +294,11 @@ function downloadIcs(){
   document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
   toast('已下載行事曆檔（.ics），打開就能加入手機或 Google 行事曆');
 }
-function actsBox(){ return '<div class="acts"><button type="button" class="abtn" data-act="share">🔗 分享這晚</button><button type="button" class="abtn" data-act="ics">📅 加入行事曆</button></div>'; }
+function actsBox(){
+  var v = st.spot ? spotLogs(st.spot) : [], last = v.map(function(L){ return L.date; }).sort().pop();
+  return '<div class="acts"><button type="button" class="abtn" data-act="share">🔗 分享這晚</button><button type="button" class="abtn" data-act="ics">📅 加入行事曆</button><button type="button" class="abtn" data-act="log">✍ 記錄這晚</button></div>' +
+    (v.length ? '<div class="fcnote"><span class="visited">★ 蓋過章</span>：你在這裡觀星過 ' + v.length + ' 次（最近 ' + last.replace(/-/g, '/') + '）</div>' : '');
+}
 function fcNote(){
   return '<div class="fcnote">' + (fcState === 'loading' ? '☁ 正在讀取雲量預報…' : fcState === 'fail' ? '☁ 雲量預報暫時讀不到，指數用氣候粗估。' :
     '☁ 這天超過預報範圍（約 7 天），指數用氣候粗估；7 天內會改用雲量預報。') + '</div>';
@@ -261,7 +319,7 @@ function render(opts){
     place.innerHTML = '<h2>' + esc(sp.name) + '<small>' + esc(sp.city) + '</small></h2>' +
       '<div class="meta">' + scoreChip(r.score, '（' + m + '/' + d + '）') + lpChip(sp.lp) + '<span>' + SM.TYPES[sp.type].icon + ' ' + SM.TYPES[sp.type].name + '</span><span>海拔約 ' + sp.elev.toLocaleString() + ' m</span></div>' +
       (sp.cert ? '<div class="certbox">★ ' + esc(sp.cert) + '</div>' : '') +
-      nightBox(ns, r.fc) + planetBox(sp.at[1], sp.at[0]) + showerBox() +
+      nightBox(ns, r.fc) + skyBox() + planetBox(sp.at[1], sp.at[0]) + showerBox() +
       (r.fc ? '<div class="wxrow"><span class="clr fcb">☁ 預報' + SM.cloudName(r.fc.cloud) + '：雲量平均 ' + Math.round(r.fc.cloud) + '%' + (r.fc.tmin != null ? '・夜間低溫約 ' + Math.round(r.fc.tmin) + '°C' : '') + '</span>' +
           '<span class="fcsrc">模式預報，更新於 ' + fcUpdated() + '・<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a></span></div>' +
           (r.wx.length ? '<div class="wxrow"><span class="clr">這個月常見：</span>' + wxChips(r.wx) + '</div>' : '')
@@ -279,7 +337,7 @@ function render(opts){
     var rg = st.region === 'all' ? null : SM.regionById[st.region];
     var best = scope.slice().sort(function(a, b){ return SM.score(b, y, m, d).v - SM.score(a, y, m, d).v; })[0];
     var pn = planetNames(), anyFc = scope.some(function(p){ return SM.score(p, y, m, d).fc; });
-    place.innerHTML = '<h2>' + m + '/' + d + ' 的夜空<small>' + (rg ? rg.name + '・' : '全台灣・') + scope.length + ' 個觀星點</small></h2>' + nightBox(n) + planetBox() + showerBox() +
+    place.innerHTML = '<h2>' + m + '/' + d + ' 的夜空<small>' + (rg ? rg.name + '・' : '全台灣・') + scope.length + ' 個觀星點</small></h2>' + nightBox(n) + skyBox() + planetBox() + showerBox() +
       '<p>' + (good ? '今晚有 <b>' + good + '</b> 個觀星點指數 4 以上，最推薦：<button type="button" class="lnk" data-spot="' + best.id + '">' + esc(best.name) + '</button>。' : n.darkH < 2 ? '月光很亮，適合賞月' + (pn.length ? '、看' + pn.join('、') : '與看亮星') + '；想看銀河請挑新月前後。' : '條件普通，挑光害少、天氣好的地方。') +
       (anyFc ? '指數已用雲量預報（<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>，' + fcUpdated() + ' 更新）。' : '') +
       (st.layer ? '地圖上橘黃色的光暈是城市光害（示意）。' : '') + '時間以台灣中部估算，各地相差幾分鐘。</p>' + (anyFc ? '' : fcNote()) + actsBox();
@@ -294,7 +352,7 @@ function render(opts){
     list.innerHTML = html;
   }
   if (window.StarScene && StarScene.ready){
-    StarScene.setDate(y, m, d); StarScene.selectSpot(st.spot); StarScene.setLayer(st.layer);
+    StarScene.setDate(y, m, d); StarScene.selectSpot(st.spot); StarScene.setLayer(st.layer); pushSky();
     if (opts.fly){
       if (sp) StarScene.focusSpot(sp.id);
       else if (st.region !== 'all') StarScene.focusRegion(scope.map(function(p){ return p.id; }));
@@ -306,6 +364,7 @@ function render(opts){
 
 /* ---------- 動作 ---------- */
 function setDate(y, m, d){
+  st.skyMs = null; stopSkyPlay();
   var t = new Date(Date.UTC(y, m - 1, d)); st.y = t.getUTCFullYear(); st.m = t.getUTCMonth() + 1; st.d = t.getUTCDate();
   if (st.y < 2000){ st.y = 2000; } if (st.y > 2099){ st.y = 2099; }
   render();
@@ -340,9 +399,112 @@ function buildEtiquette(){
   $('lgScore').innerHTML = [5, 4, 3, 2, 1].map(function(s){ return '<span><i style="background:' + SM.SCORES[s].c + '"></i>' + SM.SCORES[s].name + '</span>'; }).join('');
 }
 
+/* ---------- 觀星護照：紀錄只存在本機 localStorage ---------- */
+var LOG_KEY = 'taiwanStarLog';
+var SAW = [['mw', '🌌 銀河'], ['meteor', '☄ 流星'], ['planet', '🪐 行星'], ['const', '✨ 星座'], ['moon', '🌙 月亮'], ['dso', '🔭 星團星雲'], ['cloud', '☁ 雲太多沒看到']];
+function logs(){ var a = lsGet(LOG_KEY, []); return Array.isArray(a) ? a : []; }
+function saveLogs(a){ lsSet(LOG_KEY, a); }
+function ymdStr(y, m, d){ return y + '-' + ('0' + m).slice(-2) + '-' + ('0' + d).slice(-2); }
+function spotLogs(id){ return logs().filter(function(L){ return L.spot === id; }); }
+var BADGES = [
+  {id:'first', icon:'🌠', name:'第一次觀星', tip:'記下第一筆觀星紀錄', ok:function(a){ return a.length >= 1; }},
+  {id:'mw', icon:'🌌', name:'銀河獵人', tip:'記錄看到銀河', ok:function(a){ return a.some(function(L){ return L.saw.indexOf('mw') >= 0; }); }},
+  {id:'dark', icon:'🏞', name:'走進暗空公園', tip:'在合歡山暗空公園或拉拉山暗空勝地觀星', ok:function(a){ return a.some(function(L){ var p = SM.spotById[L.spot]; return p && /國際暗空/.test(certShort(p)); }); }},
+  {id:'shower', icon:'☄', name:'流星雨之夜', tip:'在流星雨極大前後一天觀星', ok:function(a){ return a.some(function(L){ var q = L.date.split('-').map(Number); return SM.showersNear(q[0], q[1], q[2]).some(function(s){ return Math.abs(s.dd) <= 1; }); }); }},
+  {id:'newmoon', icon:'🌑', name:'新月之夜', tip:'在月亮照亮不到 5% 的晚上觀星', ok:function(a){ return a.some(function(L){ var q = L.date.split('-').map(Number); return AS.night(q[0], q[1], q[2]).illum < .05; }); }},
+  {id:'alpine', icon:'🏔', name:'高山觀星', tip:'在海拔 2,500 公尺以上的觀星點觀星', ok:function(a){ return a.some(function(L){ var p = SM.spotById[L.spot]; return p && p.elev >= 2500; }); }},
+  {id:'island', icon:'🏝', name:'離島星空', tip:'在綠島、澎湖或馬祖觀星', ok:function(a){ return a.some(function(L){ var p = SM.spotById[L.spot]; return p && p.type === 'island'; }); }},
+  {id:'meteor10', icon:'💫', name:'流星收集家', tip:'累計記錄 10 顆流星', ok:function(a){ return a.reduce(function(t, L){ return t + (L.met || 0); }, 0) >= 10; }},
+  {id:'regions', icon:'🧭', name:'走遍五區', tip:'北部、中部高山、南部、花東、離島都去過', ok:function(a){ var r = {}; a.forEach(function(L){ var p = SM.spotById[L.spot]; if (p) r[p.r] = 1; }); return Object.keys(r).length >= SM.REGIONS.length; }},
+  {id:'ten', icon:'🔭', name:'十晚觀星家', tip:'累計 10 晚觀星紀錄', ok:function(a){ return a.length >= 10; }},
+  {id:'all', icon:'👑', name:'全台觀星點制霸', tip:'15 個觀星點都蓋到章', ok:function(a){ var v = {}; a.forEach(function(L){ if (SM.spotById[L.spot]) v[L.spot] = 1; }); return Object.keys(v).length >= SM.SPOTS.length; }}
+];
+function renderPass(){
+  var a = logs().slice().sort(function(x, y){ return x.date < y.date ? 1 : x.date > y.date ? -1 : y.at - x.at; });
+  var visited = {}; a.forEach(function(L){ if (SM.spotById[L.spot]) (visited[L.spot] = visited[L.spot] || []).push(L.date); });
+  var mwN = a.filter(function(L){ return L.saw.indexOf('mw') >= 0; }).length, met = a.reduce(function(t, L){ return t + (L.met || 0); }, 0);
+  $('passStats').innerHTML = '<div><b>' + a.length + '</b>晚觀星紀錄</div><div><b>' + Object.keys(visited).length + '／' + SM.SPOTS.length + '</b>個觀星點蓋過章</div><div><b>' + mwN + '</b>次看到銀河</div><div><b>' + met + '</b>顆流星</div>';
+  $('passStamps').innerHTML = SM.SPOTS.map(function(p){
+    var v = visited[p.id], first = v ? v.slice().sort()[0] : '';
+    return '<button type="button" class="stamp' + (v ? ' on' : '') + '" data-pspot="' + p.id + '" title="' + esc(p.name) + (v ? '：去過 ' + v.length + ' 次' : '：還沒去過') + '">' +
+      (v ? '★ ' : '') + '<b>' + esc(p.name.replace(/合歡山暗空公園・/, '合歡山・').replace(/（.*）/, '')) + '</b><small>' + (v ? first.replace(/-/g, '.') + (v.length > 1 ? '・' + v.length + ' 次' : '') : '尚未造訪') + '</small></button>';
+  }).join('');
+  $('passBadges').innerHTML = BADGES.map(function(b){ var on = b.ok(a); return '<div class="badge' + (on ? ' on' : '') + '" title="' + esc(b.tip) + '"><i>' + b.icon + '</i><div><b>' + b.name + '</b>' + (on ? '已達成' : esc(b.tip)) + '</div></div>'; }).join('');
+  $('passList').innerHTML = a.length ? a.map(function(L){
+    var p = SM.spotById[L.spot], q = L.date.split('-').map(Number), n = AS.night(q[0], q[1], q[2]);
+    return '<div class="lentry"><div class="lh"><b>' + q[1] + '/' + q[2] + '（' + wday(q[0], q[1], q[2]) + '）' + q[0] + '</b><span>' + esc(p ? p.name : (L.spotName || '其他地點')) + '</span><span>' + AS.moonSvg(n.illum, n.waxing, 13) + ' ' + n.phase + '</span>' +
+      (L.rate ? '<em>' + '★★★★★'.slice(0, L.rate) + '</em>' : '') + '<button type="button" class="sbtn" data-edit="' + L.id + '">編輯</button></div>' +
+      '<div class="ls">' + L.saw.map(function(k){ var x = SAW.filter(function(s){ return s[0] === k; })[0]; return x ? '<span>' + x[1] + (k === 'meteor' && L.met ? ' ' + L.met + ' 顆' : '') + '</span>' : ''; }).join('') +
+      (L.saw.indexOf('meteor') < 0 && L.met ? '<span>☄ 流星 ' + L.met + ' 顆</span>' : '') + '</div>' + (L.note ? '<p>' + esc(L.note) + '</p>' : '') + '</div>';
+  }).join('') : '<div class="lempty">還沒有紀錄。到觀星點的面板按「✍ 記錄這晚」，或按上面的「新增一筆」。</div>';
+}
+var editId = null, logRate = 0;
+function openLog(id){
+  var L = id ? logs().filter(function(x){ return x.id === id; })[0] : null, tn = tonight();
+  editId = L ? L.id : null;
+  $('logTitle').textContent = L ? '✍ 編輯觀星紀錄' : '✍ 記錄這晚';
+  $('logSpot').innerHTML = SM.REGIONS.map(function(r){ return '<optgroup label="' + r.name + '">' + SM.SPOTS.filter(function(p){ return p.r === r.id; }).map(function(p){ return '<option value="' + p.id + '">' + esc(p.name) + '</option>'; }).join('') + '</optgroup>'; }).join('') + '<option value="other">其他地點（不蓋章）</option>';
+  var dDef = ymdStr(st.y, st.m, st.d); if (dDef > ymdStr(tn.y, tn.m, tn.d)) dDef = ymdStr(tn.y, tn.m, tn.d);
+  $('logDate').value = L ? L.date : dDef; $('logDate').max = ymdStr(tn.y, tn.m, tn.d);
+  $('logSpot').value = L ? (SM.spotById[L.spot] ? L.spot : 'other') : (st.spot || 'other');
+  $('logSaw').innerHTML = SAW.map(function(x){ return '<label><input type="checkbox" value="' + x[0] + '"' + (L && L.saw.indexOf(x[0]) >= 0 ? ' checked' : '') + '>' + x[1] + '</label>'; }).join('');
+  $('logMet').value = L ? (L.met || 0) : 0; $('logNote').value = L ? (L.note || '') : '';
+  logRate = L ? (L.rate || 0) : 0; drawRate();
+  $('logErr').textContent = ''; $('logDel').hidden = !L;
+  openModal('logm');
+}
+function drawRate(){ $('logRate').innerHTML = [1, 2, 3, 4, 5].map(function(k){ return '<button type="button" data-rate="' + k + '" class="' + (k <= logRate ? 'on' : '') + '" aria-label="' + k + ' 顆星" aria-pressed="' + (k === logRate ? 'true' : 'false') + '">★</button>'; }).join(''); }
+function saveLog(){
+  var date = $('logDate').value, tn = tonight();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)){ $('logErr').textContent = '請選日期。'; return; }
+  if (date > ymdStr(tn.y, tn.m, tn.d)){ $('logErr').textContent = '這天還沒到喔，觀星完再回來記錄。'; return; }
+  var saw = [].map.call($('logSaw').querySelectorAll('input:checked'), function(i){ return i.value; });
+  var met = Math.max(0, Math.min(999, Math.round(+$('logMet').value || 0)));
+  if (met > 0 && saw.indexOf('meteor') < 0) saw.push('meteor');
+  var spot = $('logSpot').value, a = logs(), rec = {id:editId || ('L' + Date.now().toString(36)), date:date, spot:spot, saw:saw, met:met, rate:logRate, note:$('logNote').value.trim().slice(0, 300), at:Date.now()};
+  var before = BADGES.filter(function(b){ return b.ok(a); }).map(function(b){ return b.id; });
+  a = a.filter(function(L){ return L.id !== rec.id; }); a.push(rec); saveLogs(a);
+  var gained = BADGES.filter(function(b){ return b.ok(a) && before.indexOf(b.id) < 0; });
+  closeModal($('logm'));
+  toast(gained.length ? '🎉 獲得徽章：' + gained.map(function(b){ return b.icon + b.name; }).join('、') : SM.spotById[spot] ? '已蓋章：' + SM.spotById[spot].name : '已儲存紀錄');
+  if ($('pass').classList.contains('show')) renderPass();
+  render();
+}
+function delLog(){
+  if (!editId) return;
+  var b = $('logDel');
+  if (b.dataset.confirm !== '1'){ b.dataset.confirm = '1'; b.textContent = '再按一次確定刪除'; setTimeout(function(){ b.dataset.confirm = ''; b.textContent = '🗑 刪除這筆'; }, 3000); return; }
+  b.dataset.confirm = ''; b.textContent = '🗑 刪除這筆';
+  saveLogs(logs().filter(function(L){ return L.id !== editId; })); closeModal($('logm')); toast('已刪除這筆紀錄');
+  if ($('pass').classList.contains('show')) renderPass();
+  render();
+}
+function exportLogs(){
+  var a = document.createElement('a'), blob = new Blob([JSON.stringify({app:'taiwan-stargazing-map', v:1, at:new Date().toISOString(), logs:logs()}, null, 2)], {type:'application/json'});
+  var tn = tonight(); a.href = URL.createObjectURL(blob); a.download = 'stargazing-passport-' + ymdStr(tn.y, tn.m, tn.d) + '.json';
+  document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function importLogs(file){
+  var rd = new FileReader();
+  rd.onload = function(){
+    try {
+      var j = JSON.parse(rd.result), inc = Array.isArray(j) ? j : j.logs;
+      if (!Array.isArray(inc)) throw new Error('格式不對');
+      var ok = inc.filter(function(L){ return L && typeof L.id === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(L.date) && typeof L.spot === 'string' && Array.isArray(L.saw); }).map(function(L){
+        return {id:L.id.slice(0, 40), date:L.date, spot:L.spot.slice(0, 40), saw:L.saw.filter(function(k){ return SAW.some(function(x){ return x[0] === k; }); }), met:Math.max(0, Math.min(999, +L.met || 0)), rate:Math.max(0, Math.min(5, +L.rate || 0)), note:String(L.note || '').slice(0, 300), at:+L.at || Date.now()};
+      });
+      var a = logs(), ids = {}; a.forEach(function(L){ ids[L.id] = 1; });
+      var added = ok.filter(function(L){ return !ids[L.id]; }); saveLogs(a.concat(added));
+      toast('匯入 ' + added.length + ' 筆紀錄' + (ok.length - added.length ? '（' + (ok.length - added.length) + ' 筆已存在，略過）' : ''));
+      renderPass(); render();
+    } catch (e){ toast('匯入失敗：檔案不是觀星護照的備份'); }
+  };
+  rd.readAsText(file);
+}
+
 /* ---------- 常用設定（收合式） ---------- */
 function fillSettings(){
-  $('setDate').value = set.date; $('setLayer').checked = set.layer !== false; $('setLabels').checked = !!set.labels; $('setMotion').value = set.motion; $('setTheme').value = set.theme; $('setPlay').value = String(set.play); $('setRed').checked = !!set.red; $('sv-red').textContent = set.red ? '開' : '關';
+  $('setDate').value = set.date; $('setLayer').checked = set.layer !== false; $('setLabels').checked = !!set.labels; $('setMotion').value = set.motion; $('setTheme').value = set.theme; $('setPlay').value = String(set.play); $('setRed').checked = !!set.red; $('sv-red').textContent = set.red ? '開' : '關'; $('setSky').checked = set.sky !== false; $('sv-sky').textContent = set.sky !== false ? '顯示' : '隱藏';
   var txt = function(id){ var s = $(id); return s.options[s.selectedIndex] ? s.options[s.selectedIndex].text : ''; };
   $('sv-date').textContent = txt('setDate'); $('sv-layer').textContent = set.layer !== false ? '開' : '關'; $('sv-labels').textContent = set.labels ? '顯示' : '隱藏';
   $('sv-motion').textContent = txt('setMotion'); $('sv-play').textContent = txt('setPlay').replace(/（.*/, ''); $('sv-theme').textContent = txt('setTheme');
@@ -350,9 +512,9 @@ function fillSettings(){
   document.querySelectorAll('.set-sec').forEach(function(d){ d.open = open.indexOf(d.dataset.sec) >= 0; });
 }
 function saveSettings(){
-  set = {date:$('setDate').value, layer:$('setLayer').checked, labels:$('setLabels').checked, motion:$('setMotion').value, theme:$('setTheme').value, play:+$('setPlay').value, red:$('setRed').checked};
+  set = {date:$('setDate').value, layer:$('setLayer').checked, labels:$('setLabels').checked, motion:$('setMotion').value, theme:$('setTheme').value, play:+$('setPlay').value, red:$('setRed').checked, sky:$('setSky').checked};
   lsSet(SET_KEY, set); applyTheme(); applyRed();
-  if (window.StarScene && StarScene.ready){ StarScene.setLabels(set.labels); StarScene.setReduce(reduceOn()); }
+  if (window.StarScene && StarScene.ready){ StarScene.setLabels(set.labels); StarScene.setReduce(reduceOn()); StarScene.setConst(set.sky !== false); }
   if (playT){ stopPlay(); startPlay(); }
   fillSettings();
 }
@@ -373,15 +535,27 @@ function bind(){
   $('selRegion').addEventListener('change', function(){ selectRegion(this.value); });
   $('selSpot').addEventListener('change', function(){ if (this.value) selectSpot(this.value); else selectRegion(st.region); });
   $('list').addEventListener('click', function(e){ var c = e.target.closest('.scard'); if (c) selectSpot(c.dataset.spot); });
+  $('place').addEventListener('input', function(e){ if (e.target.id === 'skyRange'){ stopSkyPlay(); setSkyIdx(+e.target.value); } });
   $('place').addEventListener('click', function(e){
+    var sk = e.target.closest('[data-sky]');
+    if (sk){ var k = sk.dataset.sky; if (k === 'play'){ if (skyPlayT) stopSkyPlay(); else startSkyPlay(); } else if (k === 'now'){ stopSkyPlay(); st.skyMs = null; updateSkyUI(); } else toggleLook(); return; }
     var y = e.target.closest('[data-ymd]'); if (y){ stopPlay(); var q = y.dataset.ymd.split('-').map(Number); setDate(q[0], q[1], q[2]); return; }
-    var a = e.target.closest('[data-act]'); if (a){ if (a.dataset.act === 'share') shareNight(); else downloadIcs(); return; }
+    var a = e.target.closest('[data-act]'); if (a){ if (a.dataset.act === 'share') shareNight(); else if (a.dataset.act === 'log') openLog(); else downloadIcs(); return; }
     var s = e.target.closest('[data-spot]'); if (s) selectSpot(s.dataset.spot);
   });
   $('btnAll').addEventListener('click', function(){ st.region = 'all'; st.spot = null; fillSelectors(); render({fly:true}); });
   $('btnAbout').addEventListener('click', function(){ openModal('about'); });
   ['btnEtq', 'btnEtq2', 'btnEtq3'].forEach(function(id){ $(id).addEventListener('click', function(){ if (id === 'btnEtq3') closeModal($('about')); openModal('etq'); }); });
   $('btnSet').addEventListener('click', function(){ fillSettings(); openModal('settings'); });
+  $('btnPass').addEventListener('click', function(){ renderPass(); openModal('pass'); });
+  $('passAdd').addEventListener('click', function(){ openLog(); });
+  $('passList').addEventListener('click', function(e){ var b = e.target.closest('[data-edit]'); if (b) openLog(b.dataset.edit); });
+  $('passStamps').addEventListener('click', function(e){ var b = e.target.closest('[data-pspot]'); if (b){ closeModal($('pass')); selectSpot(b.dataset.pspot); } });
+  $('passExport').addEventListener('click', exportLogs);
+  $('passImport').addEventListener('change', function(){ if (this.files[0]) importLogs(this.files[0]); this.value = ''; });
+  $('logRate').addEventListener('click', function(e){ var b = e.target.closest('[data-rate]'); if (b){ logRate = +b.dataset.rate === logRate ? 0 : +b.dataset.rate; drawRate(); } });
+  $('logSave').addEventListener('click', saveLog);
+  $('logDel').addEventListener('click', delLog);
   $('settings').addEventListener('change', saveSettings);
   document.querySelectorAll('.set-sec').forEach(function(d){ d.addEventListener('toggle', saveSecs); });
   $('setOpenAll').addEventListener('click', function(){ document.querySelectorAll('.set-sec').forEach(function(d){ d.open = true; }); saveSecs(); });
@@ -398,7 +572,7 @@ function bind(){
     m.addEventListener('click', function(e){ if (e.target === m || e.target.closest('[data-close]')) closeModal(m); });
   });
   document.addEventListener('keydown', function(e){
-    var open = document.querySelector('.modal.show');
+    var mods = document.querySelectorAll('.modal.show'), open = mods[mods.length - 1];   // 疊在最上面的對話框先關
     if (e.key === 'Escape' && open){ closeModal(open); return; }
     if (open || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
     if (e.key === 'ArrowRight'){ stopPlay(); shiftDay(1); }
@@ -422,11 +596,12 @@ function stopPlay(){ if (!playT) return; clearInterval(playT); playT = 0; $('pla
 /* ---------- 啟動 ---------- */
 fillSelectors(); buildEtiquette(); bind(); if (innerWidth <= 760) setSheet(true); render();
 if (fcStale()) fcFetch();
+skyLiveT = setInterval(function(){ if (st.skyMs == null && !skyPlayT){ var was = skyLive; skyNow(); if (was || skyLive) updateSkyUI(); } }, 60000);
 document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'visible' && fcStale()) fcFetch(); });
 StarScene.onPickSpot = function(id){ selectSpot(id); };
 function firstVisit(){ if (!lsGet(SEEN_KEY, 0)) openModal('about'); }
 StarScene.init({host:$('stage'), labels:$('labels'), reduce:reduceOn(), date:{y:st.y, m:st.m, d:st.d}, layer:st.layer}).then(function(){
-  StarScene.setLabels(set.labels);
+  StarScene.setLabels(set.labels); StarScene.setConst(set.sky !== false);
   render({fly:true});
   setTimeout(function(){ $('loading').classList.add('hide'); firstVisit(); }, 250);
 }).catch(function(err){
@@ -436,5 +611,5 @@ StarScene.init({host:$('stage'), labels:$('labels'), reduce:reduceOn(), date:{y:
   $('loading').addEventListener('click', function(){ $('loading').classList.add('hide'); firstVisit(); }, {once:true});
 });
 
-window.__star = {fcFetch:fcFetch, fc:function(){ return {state:fcState, data:fcData}; }, planetBox:planetBox, spotCands:spotCands, shareUrl:shareUrl, shareText:shareText, buildIcs:buildIcs, toast:toast, state:st, setDate:setDate, shiftDay:shiftDay, selectSpot:selectSpot, selectRegion:selectRegion, setLayer:setLayer, nextGood:nextGood, SM:SM, AS:AS, scene:StarScene};
+window.__star = {logs:logs, openLog:openLog, renderPass:renderPass, BADGES:BADGES, setSkyIdx:setSkyIdx, skyNow:skyNow, toggleLook:toggleLook, fcFetch:fcFetch, fc:function(){ return {state:fcState, data:fcData}; }, planetBox:planetBox, spotCands:spotCands, shareUrl:shareUrl, shareText:shareText, buildIcs:buildIcs, toast:toast, state:st, setDate:setDate, shiftDay:shiftDay, selectSpot:selectSpot, selectRegion:selectRegion, setLayer:setLayer, nextGood:nextGood, SM:SM, AS:AS, scene:StarScene};
 })();

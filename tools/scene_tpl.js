@@ -1,7 +1,7 @@
 /* ================= 台灣觀星地圖：3D 場景 =================
  * Three.js（importmap 指到 jsdelivr）。台灣本島與離島輪廓、山脈地形、離岸距離場沿用台灣賞鳥地圖的做法。
- * 整張地圖是夜景：月光照明（亮度依當晚月相）、陸地 shader 疊上城市光害光暈（「光害圖層」）、夜空半球有星星、
- * 依當晚無月暗夜與銀河核心可見時數顯示銀河帶、依月相畫月亮，流星雨期間有流星劃過。
+ * 整張地圖是夜景：月光照明（亮度依當晚月相）、陸地 shader 疊上城市光害光暈（「光害圖層」）、夜空是一顆依「日期＋時間＋觀星點緯度」
+ * 轉動的天球（真實亮星、星座連線、沿銀道的銀河帶、月亮與行星在實際位置，地平線以下用裁切平面切掉），流星雨期間有流星劃過。
  * 每個觀星點放一座小平台：望遠鏡、腳架相機、觀星的人與紅光手電筒，暗空公園／暗空勝地插上認證小旗。
  * 座標：x = 東西、z = 南北（北為 -z）、y = 高度；1 單位約 10 公里，山高與景物大小都有誇大。
  * 本檔由 tools/build_scene.py 把賞花地圖 scene.js 的共用段落（地形、標籤、排列、雲、鏡頭、點選）組進來。
@@ -166,62 +166,188 @@ function dotTex(soft){
   x.fillStyle = g; x.fillRect(0, 0, 32, 32);
   return new T.CanvasTexture(c);
 }
-var SKY_R = 380;
+var SKY_R = 380, DEG = Math.PI / 180;
+var skyT = {ms:null, lat:23.7, lon:121.0}, skyLabs = [], showConst = true, lookUp = false, skyInfo = {};
 function dirOnSky(az, alt){ return new T.Vector3(Math.sin(az) * Math.cos(alt), Math.sin(alt), -Math.cos(az) * Math.cos(alt)); }
+/* 天球：子物件放在赤道座標（J2000；x→春分點、y→赤經 90°、z→北天極），整組依地點緯度與恆星時轉成地平座標，並跟著鏡頭移動（等於無限遠） */
+function eqVec(ra, dec, r){ ra *= DEG; dec *= DEG; return new T.Vector3(Math.cos(dec) * Math.cos(ra) * r, Math.cos(dec) * Math.sin(ra) * r, Math.sin(dec) * r); }
+var GAL = [[-.0548755604, -.8734370902, -.4838350155], [.4941094279, -.4448296300, .7469822445], [-.8676661490, -.1980763734, .4559837762]];
+function galVec(l, b, r){
+  l *= DEG; b *= DEG; var g = [Math.cos(b) * Math.cos(l), Math.cos(b) * Math.sin(l), Math.sin(b)];
+  return new T.Vector3((GAL[0][0] * g[0] + GAL[1][0] * g[1] + GAL[2][0] * g[2]) * r, (GAL[0][1] * g[0] + GAL[1][1] * g[1] + GAL[2][1] * g[2]) * r, (GAL[0][2] * g[0] + GAL[1][2] * g[1] + GAL[2][2] * g[2]) * r);
+}
+function skyMat(o){ o.transparent = true; o.depthWrite = false; o.fog = false; o.clippingPlanes = [sky.clip]; return o; }
 function buildSky(){
-  var n = 2600, pos = new Float32Array(n * 3), colr = new Float32Array(n * 3), i;
+  var i;
+  sky.clip = new T.Plane(new T.Vector3(0, 1, 0), 0);   // 地平線以下切掉
+  sky.cel = new T.Group(); sky.cel.renderOrder = -1; scene.add(sky.cel);
+  /* 背景暗星：一半沿銀河盤面集中、一半均勻分布 */
+  var n = 2600, pos = new Float32Array(n * 3), colr = new Float32Array(n * 3);
   for (i = 0; i < n; i++){
-    var u = hash(i * 1.7), v = hash(i * 3.3 + 1), az = u * Math.PI * 2, al = Math.asin(.02 + v * .98);
-    var d = dirOnSky(az, al).multiplyScalar(SKY_R); pos[i * 3] = d.x; pos[i * 3 + 1] = d.y * .7 + 6; pos[i * 3 + 2] = d.z;
+    var v = hash(i * 1.7) < .45 ? galVec(hash(i * 3.3 + 1) * 360, (hash(i * 5.1) + hash(i * 6.7) + hash(i * 8.9) - 1.5) * 22, SKY_R)
+      : eqVec(hash(i * 3.3 + 1) * 360, Math.asin(hash(i * 2.9 + 7) * 2 - 1) / DEG, SKY_R);
+    pos[i * 3] = v.x; pos[i * 3 + 1] = v.y; pos[i * 3 + 2] = v.z;
     var t = hash(i * 9.1); colr[i * 3] = t < .2 ? .75 : 1; colr[i * 3 + 1] = t < .2 ? .85 : t > .85 ? .85 : .97; colr[i * 3 + 2] = t > .85 ? .7 : 1;
   }
   var g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(pos, 3)); g.setAttribute('color', new T.BufferAttribute(colr, 3));
-  sky.stars = new T.Points(g, new T.PointsMaterial({size:2, map:dotTex(), vertexColors:true, transparent:true, depthWrite:false, sizeAttenuation:false, fog:false}));
-  sky.stars.frustumCulled = false; scene.add(sky.stars);
-  var g2 = new T.BufferGeometry(), p2 = new Float32Array(400 * 3);
-  for (i = 0; i < 400; i++){ var d2 = dirOnSky(hash(i * 5.3) * 6.28, Math.asin(.05 + hash(i * 7.7) * .95)).multiplyScalar(SKY_R); p2[i * 3] = d2.x; p2[i * 3 + 1] = d2.y * .7 + 6; p2[i * 3 + 2] = d2.z; }
+  sky.stars = new T.Points(g, new T.PointsMaterial(skyMat({size:2, map:dotTex(), vertexColors:true, sizeAttenuation:false})));
+  sky.stars.frustumCulled = false; sky.cel.add(sky.stars);
+  var g2 = new T.BufferGeometry(), p2 = new Float32Array(260 * 3);
+  for (i = 0; i < 260; i++){ var d2 = eqVec(hash(i * 5.3) * 360, Math.asin(hash(i * 7.7) * 2 - 1) / DEG, SKY_R); p2[i * 3] = d2.x; p2[i * 3 + 1] = d2.y; p2[i * 3 + 2] = d2.z; }
   g2.setAttribute('position', new T.BufferAttribute(p2, 3));
-  sky.bright = new T.Points(g2, new T.PointsMaterial({size:3.6, map:dotTex(), color:'#fffbe8', transparent:true, depthWrite:false, sizeAttenuation:false, fog:false}));
-  sky.bright.frustumCulled = false; scene.add(sky.bright);
-  /* 銀河帶：畫在 canvas 上的長條（亮核心＋暗帶＋細星），放在南方天空、斜斜升起 */
-  var cv = document.createElement('canvas'); cv.width = 1024; cv.height = 256;
+  sky.bright = new T.Points(g2, new T.PointsMaterial(skyMat({size:2.8, map:dotTex(), color:'#fffbe8', sizeAttenuation:false})));
+  sky.bright.frustumCulled = false; sky.cel.add(sky.bright);
+  /* 真實亮星：依星等分三組大小 */
+  sky.cat = [[-9, .55, 7], [.55, 1.7, 5.2], [1.7, 9, 3.9]].map(function(bin){
+    var list = SM.STARS.filter(function(s){ return s[4] >= bin[0] && s[4] < bin[1] && s[0] !== 'm31'; });
+    var pp = new Float32Array(list.length * 3), cc = new Float32Array(list.length * 3);
+    list.forEach(function(s, k){
+      var v3 = eqVec(s[2], s[3], SKY_R * .998); pp[k * 3] = v3.x; pp[k * 3 + 1] = v3.y; pp[k * 3 + 2] = v3.z;
+      var c3 = s[5] === 'r' ? [1, .62, .45] : s[5] === 'o' ? [1, .82, .6] : [.92, .96, 1]; cc[k * 3] = c3[0]; cc[k * 3 + 1] = c3[1]; cc[k * 3 + 2] = c3[2];
+    });
+    var gg = new T.BufferGeometry(); gg.setAttribute('position', new T.BufferAttribute(pp, 3)); gg.setAttribute('color', new T.BufferAttribute(cc, 3));
+    var pts = new T.Points(gg, new T.PointsMaterial(skyMat({size:bin[2], map:dotTex(), vertexColors:true, sizeAttenuation:false})));
+    pts.frustumCulled = false; sky.cel.add(pts); return pts;
+  });
+  /* 星座連線 */
+  var lp = [], tp = [];
+  SM.CONSTS.forEach(function(c){
+    for (var k = 0; k < c.lines.length; k += 2){
+      var a = SM.starById[c.lines[k]], b = SM.starById[c.lines[k + 1]], va = eqVec(a[2], a[3], SKY_R * .996), vb = eqVec(b[2], b[3], SKY_R * .996);
+      // 兩星之間沿大圓插幾點，避免直線穿過天球內部
+      for (var s = 0; s < 6; s++){
+        var p0 = va.clone().lerp(vb, s / 6).setLength(SKY_R * .996), p1 = va.clone().lerp(vb, (s + 1) / 6).setLength(SKY_R * .996);
+        (c.tri ? tp : lp).push(p0.x, p0.y, p0.z, p1.x, p1.y, p1.z);
+      }
+    }
+  });
+  function lines(arr, color, op){
+    var lg = new T.BufferGeometry(); lg.setAttribute('position', new T.BufferAttribute(new Float32Array(arr), 3));
+    var L = new T.LineSegments(lg, new T.LineBasicMaterial(skyMat({color:color, opacity:op}))); L.frustumCulled = false; sky.cel.add(L); return L;
+  }
+  sky.constLines = [lines(lp, '#e6c36a', .38), lines(tp, '#8fb8ff', .28)];
+  /* 銀河帶：canvas 長條貼在沿銀道的帶狀網格上（銀經 −180°～180°、銀緯 ±20°），中心在人馬座 */
+  var W = 4096, HH = 512, Y0 = 256, cv = document.createElement('canvas'); cv.width = W; cv.height = HH;   // 高 512px＝銀緯 ±20°，約 12.8px／度
   var cx2 = cv.getContext('2d'), rnd = function(k){ return hash(k * 7.13 + 2.1); };
   cx2.globalCompositeOperation = 'lighter';
-  for (i = 0; i < 1600; i++){
-    var x = rnd(i) * 1024, core = Math.exp(-Math.pow((x - 330) / 230, 2)), sp = 30 + core * 40;
-    var yy = 128 + (rnd(i + 999) + rnd(i + 555) - 1) * sp + Math.sin(x / 90) * 10, r = 10 + rnd(i + 77) * (18 + core * 26);
-    var gg = cx2.createRadialGradient(x, yy, 0, x, yy, r), a = .028 + core * .05;
-    gg.addColorStop(0, 'rgba(' + Math.round(200 + core * 55) + ',' + Math.round(205 + core * 25) + ',' + Math.round(255 - core * 60) + ',' + a + ')'); gg.addColorStop(1, 'rgba(0,0,0,0)');
-    cx2.fillStyle = gg; cx2.fillRect(x - r, yy - r, r * 2, r * 2);
+  for (i = 0; i < 4200; i++){
+    var x = rnd(i) * W, dx = Math.min(Math.abs(x - W / 2), W - Math.abs(x - W / 2)), core = Math.exp(-Math.pow(dx / 620, 2)), sp = 22 + core * 70;
+    var yy = Y0 + (rnd(i + 999) + rnd(i + 555) - 1) * sp + Math.sin(x / 150) * 10, r = 14 + rnd(i + 77) * (18 + core * 44);
+    var gg2 = cx2.createRadialGradient(x, yy, 0, x, yy, r), al = .018 + core * .05;
+    gg2.addColorStop(0, 'rgba(' + Math.round(200 + core * 55) + ',' + Math.round(205 + core * 25) + ',' + Math.round(255 - core * 60) + ',' + al + ')'); gg2.addColorStop(1, 'rgba(0,0,0,0)');
+    cx2.fillStyle = gg2; cx2.fillRect(x - r, yy - r, r * 2, r * 2);
   }
   cx2.globalCompositeOperation = 'destination-out';
-  for (i = 0; i < 260; i++){
-    var x2 = rnd(i + 3000) * 1024, y2 = 128 + Math.sin(x2 / 70) * 9 + (rnd(i + 3100) - .5) * 14, r2 = 6 + rnd(i + 3200) * 14;
-    var g4 = cx2.createRadialGradient(x2, y2, 0, x2, y2, r2); g4.addColorStop(0, 'rgba(0,0,0,.35)'); g4.addColorStop(1, 'rgba(0,0,0,0)');
+  for (i = 0; i < 700; i++){   // 暗帶（大裂縫）在中心附近較明顯
+    var x2 = W / 2 + (rnd(i + 3000) - .5) * W * .6, y2 = Y0 + Math.sin(x2 / 120) * 10 + (rnd(i + 3100) - .5) * 18, r2 = 8 + rnd(i + 3200) * 20;
+    var g4 = cx2.createRadialGradient(x2, y2, 0, x2, y2, r2); g4.addColorStop(0, 'rgba(0,0,0,.32)'); g4.addColorStop(1, 'rgba(0,0,0,0)');
     cx2.fillStyle = g4; cx2.fillRect(x2 - r2, y2 - r2, r2 * 2, r2 * 2);
   }
   cx2.globalCompositeOperation = 'lighter';
-  for (i = 0; i < 2200; i++){ var x3 = rnd(i + 5000) * 1024, y3 = 128 + (rnd(i + 6000) + rnd(i + 6500) + rnd(i + 7000) - 1.5) * 70; cx2.fillStyle = 'rgba(255,255,255,' + (.25 + rnd(i + 8000) * .6) + ')'; cx2.fillRect(x3, y3, rnd(i + 9000) < .1 ? 2 : 1, 1); }
-  var fade = cx2.createLinearGradient(0, 0, 1024, 0); fade.addColorStop(0, 'rgba(0,0,0,1)'); fade.addColorStop(.12, 'rgba(0,0,0,0)'); fade.addColorStop(.85, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,1)');
-  cx2.globalCompositeOperation = 'destination-out'; cx2.fillStyle = fade; cx2.fillRect(0, 0, 1024, 256);
-  var mwTex = new T.CanvasTexture(cv);
-  sky.mw = new T.Mesh(new T.PlaneGeometry(560, 140), new T.MeshBasicMaterial({map:mwTex, transparent:true, opacity:.5, depthWrite:false, blending:T.AdditiveBlending, fog:false, side:T.DoubleSide}));
-  sky.mw.position.set(-30, 62, 340); sky.mw.lookAt(0, 6, 0); sky.mw.rotateZ(-.5);
-  sky.mw.renderOrder = -1; scene.add(sky.mw);
-  /* 月亮：canvas 依月相畫 */
+  for (i = 0; i < 9000; i++){
+    var x3 = rnd(i + 5000) * W, dx3 = Math.min(Math.abs(x3 - W / 2), W - Math.abs(x3 - W / 2)), c3 = Math.exp(-Math.pow(dx3 / 700, 2));
+    var y3 = Y0 + (rnd(i + 6000) + rnd(i + 6500) + rnd(i + 7000) - 1.5) * (40 + c3 * 50);
+    cx2.fillStyle = 'rgba(255,255,255,' + (.15 + rnd(i + 8000) * .5) * (.5 + c3 * .5) + ')'; cx2.beginPath(); cx2.arc(x3, y3, rnd(i + 9000) < .08 ? 1.6 : .9, 0, 6.29); cx2.fill();
+  }
+  var vfade = cx2.createLinearGradient(0, 0, 0, HH); vfade.addColorStop(0, 'rgba(0,0,0,1)'); vfade.addColorStop(.22, 'rgba(0,0,0,0)'); vfade.addColorStop(.78, 'rgba(0,0,0,0)'); vfade.addColorStop(1, 'rgba(0,0,0,1)');
+  cx2.globalCompositeOperation = 'destination-out'; cx2.fillStyle = vfade; cx2.fillRect(0, 0, W, HH);
+  var mwTex = new T.CanvasTexture(cv); mwTex.anisotropy = 4; mwTex.colorSpace = T.SRGBColorSpace;
+  var NL = 180, NB = 8, mp = [], mu = [], mi = [];
+  for (var bi = 0; bi <= NB; bi++) for (var li = 0; li <= NL; li++){
+    var vv = galVec(-180 + li * 360 / NL, -20 + bi * 40 / NB, SKY_R * .99); mp.push(vv.x, vv.y, vv.z); mu.push(li / NL, bi / NB);
+  }
+  for (bi = 0; bi < NB; bi++) for (li = 0; li < NL; li++){ var q = bi * (NL + 1) + li; mi.push(q, q + 1, q + NL + 1, q + 1, q + NL + 2, q + NL + 1); }
+  var mg = new T.BufferGeometry(); mg.setAttribute('position', new T.Float32BufferAttribute(mp, 3)); mg.setAttribute('uv', new T.Float32BufferAttribute(mu, 2)); mg.setIndex(mi);
+  sky.mw = new T.Mesh(mg, new T.MeshBasicMaterial(skyMat({map:mwTex, opacity:.5, blending:T.AdditiveBlending, side:T.DoubleSide})));
+  sky.mw.frustumCulled = false; sky.mw.renderOrder = -2; sky.cel.add(sky.mw);
+  /* 月亮：canvas 依月相畫，放在月亮實際的赤經赤緯 */
   sky.moonCv = document.createElement('canvas'); sky.moonCv.width = sky.moonCv.height = 128;
   sky.moonTex = new T.CanvasTexture(sky.moonCv);
-  sky.moon = new T.Sprite(new T.SpriteMaterial({map:sky.moonTex, transparent:true, depthWrite:false, fog:false}));
-  sky.moon.scale.set(26, 26, 1); scene.add(sky.moon);
-  sky.halo = new T.Sprite(new T.SpriteMaterial({map:dotTex(true), color:'#cfd8ff', transparent:true, opacity:.3, depthWrite:false, blending:T.AdditiveBlending, fog:false}));
-  sky.halo.scale.set(90, 90, 1); scene.add(sky.halo);
-  /* 流星 */
+  sky.moon = new T.Sprite(new T.SpriteMaterial(skyMat({map:sky.moonTex})));
+  sky.moon.scale.set(22, 22, 1); sky.cel.add(sky.moon);
+  sky.halo = new T.Sprite(new T.SpriteMaterial(skyMat({map:dotTex(true), color:'#cfd8ff', opacity:.3, blending:T.AdditiveBlending})));
+  sky.halo.scale.set(80, 80, 1); sky.cel.add(sky.halo);
+  /* 行星 */
+  sky.planets = {};
+  AS.PLANETS.forEach(function(p){
+    var sp2 = new T.Sprite(new T.SpriteMaterial(skyMat({map:dotTex(), color:p.c, blending:T.AdditiveBlending})));
+    sky.cel.add(sp2); sky.planets[p.id] = sp2;
+  });
+  /* 天空文字：星座、亮星、行星 */
+  function lab(text, cls, v){ var el = document.createElement('div'); el.className = 'skylab ' + cls; el.textContent = text; labelRoot.appendChild(el); var L = {el:el, v:v, on:false}; skyLabs.push(L); return L; }
+  SM.CONSTS.forEach(function(c){
+    var ids = c.lines.filter(function(x, k, a){ return a.indexOf(x) === k; }), m = new T.Vector3();
+    ids.forEach(function(id){ var s = SM.starById[id]; m.add(eqVec(s[2], s[3], 1)); });
+    lab(c.name, c.tri ? 'c tri' : 'c', m.setLength(SKY_R));
+  });
+  SM.STARS.forEach(function(s){ if (s[1]) lab(s[1], 's', eqVec(s[2], s[3], SKY_R)); });
+  sky.plLabs = {};
+  AS.PLANETS.forEach(function(p){ sky.plLabs[p.id] = lab(p.name, 'p', new T.Vector3()); });
+  sky.moonLab = lab('月亮', 'p m', new T.Vector3());
+  /* 流星（地平座標，不跟著天球轉） */
   sky.meteors = [];
   for (i = 0; i < 6; i++){
     var lg = new T.BufferGeometry(); lg.setAttribute('position', new T.BufferAttribute(new Float32Array(6), 3));
     var ln = new T.Line(lg, new T.LineBasicMaterial({color:'#fff6d8', transparent:true, opacity:0, fog:false})); ln.frustumCulled = false; scene.add(ln);
     sky.meteors.push({l:ln, t:-1, a:null, b:null});
   }
+}
+/* 依時間與地點轉天球：地平座標 x＝東、y＝天頂、z＝南 */
+var ROT = null;
+function applySky(){
+  if (!sky.cel || skyT.ms == null) return;
+  var L = AS.lst(skyT.ms, skyT.lon) * DEG, f = skyT.lat * DEG, sL = Math.sin(L), cL = Math.cos(L), sf = Math.sin(f), cf = Math.cos(f);
+  ROT = ROT || new T.Matrix4();
+  ROT.set(-sL, cL, 0, 0,  cf * cL, cf * sL, sf, 0,  sf * cL, sf * sL, -cf, 0,  0, 0, 0, 1);
+  sky.cel.setRotationFromMatrix(ROT);
+  // 月亮與行星
+  var me = AS.moonEq(skyT.ms); sky.moon.position.copy(eqVec(me.ra, me.dec, SKY_R * .95)); sky.halo.position.copy(sky.moon.position);
+  sky.moonLab.v.copy(sky.moon.position);
+  var moonDir = sky.moon.position.clone().applyMatrix4(ROT).normalize();
+  skyInfo.moonAlt = Math.asin(moonDir.y) / DEG;
+  AS.PLANETS.forEach(function(p){
+    var pp = AS.planetPos(p.id, skyT.ms), spr = sky.planets[p.id], s = 4 + Math.max(0, 1.5 - pp.mag) * 2.2;
+    spr.position.copy(eqVec(pp.ra, pp.dec, SKY_R * .97)); spr.scale.set(s, s, 1);
+    spr.material.opacity = pp.elong < 12 ? 0 : 1;   // 太靠近太陽的看不到
+    sky.plLabs[p.id].v.copy(spr.position); sky.plLabs[p.id].hide = pp.elong < 12;
+  });
+  var gc = eqVec(AS.GC.ra, AS.GC.dec, 1).applyMatrix4(ROT); skyInfo.gcAlt = Math.asin(gc.y) / DEG;
+  // 天色：太陽越低，星星與銀河越清楚
+  var sa = AS.sunAlt(skyT.ms, skyT.lat, skyT.lon); skyInfo.sunAlt = sa;
+  skyInfo.tw = smooth(3, 16, -sa);
+  applyNightLight();
+}
+/* 依天色、月亮是否在天上調整星空亮度與地面月光 */
+function applyNightLight(){
+  var n = NIGHT; if (!n || !sky.cel) return;
+  var tw = skyInfo.tw == null ? 1 : skyInfo.tw, moonUp = skyInfo.moonAlt == null ? true : skyInfo.moonAlt > 0;
+  var moonBright = n.illum * (moonUp ? 1 : .12);
+  U.moon.value = .25 + moonBright * .75;
+  hemi.intensity = .45 + moonBright * .7; moonLight.intensity = .25 + moonBright * 1.3; amb.intensity = .18 + moonBright * .2;
+  var glare = 1 - moonBright * .55;   // 月光把暗星洗掉
+  sky.stars.material.opacity = (.2 + .8 * glare) * (.12 + .88 * tw); sky.bright.material.opacity = (.45 + .55 * glare) * (.25 + .75 * tw);
+  sky.cat.forEach(function(p){ p.material.opacity = .45 + .55 * tw; });
+  sky.mw.material.opacity = .5 * glare * glare * tw;
+  sky.constLines[0].material.opacity = .38 * (.4 + .6 * tw); sky.constLines[1].material.opacity = .28 * (.4 + .6 * tw);
+  sky.moon.visible = sky.halo.visible = n.illum > .03;
+  sky.halo.material.opacity = .08 + n.illum * .32;
+  if (sky.moon.visible){ var md = sky.moon.position.clone().applyMatrix4(ROT || new T.Matrix4()); moonLight.position.copy(md.normalize().multiplyScalar(60)); if (md.y < 0) moonLight.position.y = 8; }
+}
+function layoutSky(){
+  var show = showConst && controls.getPolarAngle() > 1.2, W = host.clientWidth, H = host.clientHeight, cp = camera.position, sinMin = Math.sin(3 * DEG);
+  skyLabs.forEach(function(L){
+    var on = false;
+    if (show && !L.hide){
+      tmpV.copy(L.v).applyMatrix4(ROT || new T.Matrix4());
+      if (tmpV.y / SKY_R > sinMin){
+        tmpV.add(cp).project(camera);
+        if (tmpV.z < 1 && Math.abs(tmpV.x) < 1.05 && Math.abs(tmpV.y) < 1.05){
+          on = true; L.el.style.transform = 'translate(' + ((tmpV.x + 1) / 2 * W).toFixed(1) + 'px,' + ((1 - tmpV.y) / 2 * H).toFixed(1) + 'px) translate(-50%,-50%)';
+        }
+      }
+    }
+    if (on !== L.on){ L.on = on; L.el.classList.toggle('on', on); }
+  });
 }
 function drawMoon(illum, waxing){
   var c = sky.moonCv.getContext('2d'), R = 50, cx = 64, cy = 64;
@@ -237,19 +363,10 @@ function drawMoon(illum, waxing){
 }
 function applyNight(){
   var n = NIGHT; if (!n) return;
-  var moonBright = n.illum * (n.darkH < n.nightH - .2 ? 1 : .25);   // 整晚無月時月光弱
-  U.moon.value = .25 + moonBright * .75;
-  hemi.intensity = .45 + moonBright * .7; moonLight.intensity = .25 + moonBright * 1.3; amb.intensity = .18 + moonBright * .2;
-  var dk = Math.min(1, n.darkH / 6);
-  sky.stars.material.opacity = .35 + dk * .65; sky.bright.material.opacity = .6 + dk * .4;
-  sky.mw.material.opacity = n.gcH > 0 ? .15 + .5 * dk * Math.min(1, .45 + n.gcH / 4) : .06 + .14 * dk;
-  sky.moon.visible = sky.halo.visible = n.illum > .03;
-  sky.halo.material.opacity = .08 + n.illum * .32;
   drawMoon(n.illum, n.waxing);
-  var az = Math.PI + (n.waxing ? .42 : -.42), alt = .16 + n.illum * .08, dv = dirOnSky(az, alt);   // 上弦前後在西南、下弦前後在東南（示意，面向南方時看得到）
-  sky.moon.position.copy(dv).multiplyScalar(SKY_R * .9); sky.moon.position.y = dv.y * SKY_R * .63 + 6; sky.halo.position.copy(sky.moon.position);
-  moonLight.position.copy(dv).multiplyScalar(60);
   sky.meteorRate = (SM.showersNear(cur.y, cur.m, cur.d)[0] || {zhr:0}).zhr;
+  applyNightLight();
+  if (sky.moonLab) sky.moonLab.hide = n.illum <= .03;
 }
 function updateMeteors(t, dt){
   if (!sky.meteors) return;
@@ -257,8 +374,8 @@ function updateMeteors(t, dt){
   sky.meteors.forEach(function(me){
     if (me.t < 0){
       if (Math.random() < dt * rate * (reduce ? .2 : 1) / sky.meteors.length * 3){
-        var az = Math.random() * 6.28, al = .5 + Math.random() * .7, a = dirOnSky(az, al).multiplyScalar(SKY_R * .95), dir = new T.Vector3(Math.random() - .5, -.6 - Math.random() * .4, Math.random() - .5).normalize().multiplyScalar(40 + Math.random() * 40);
-        a.y = a.y * .7 + 6; me.a = a; me.b = a.clone().add(dir); me.t = 0;
+        var az = Math.random() < .6 ? Math.PI + (Math.random() - .5) * 2.4 : Math.random() * 6.28, al = .15 + Math.random() * .75, a = dirOnSky(az, al).multiplyScalar(SKY_R * .95), dir = new T.Vector3(Math.random() - .5, -.6 - Math.random() * .4, Math.random() - .5).normalize().multiplyScalar(40 + Math.random() * 40);
+        a.add(camera.position); me.a = a; me.b = a.clone().add(dir); me.t = 0;
       }
       return;
     }
@@ -285,18 +402,40 @@ function applyDate(){
 
 {{CLOUD}}
 {{CAMERA}}
+function endLookUp(){ lookUp = false; controls.maxPolarAngle = 1.5; }
 S.overview = function(){
+  endLookUp();
   var a = host.clientWidth / Math.max(1, host.clientHeight);
   S.flyTo(-6, 0, a < .8 ? 100 : a < 1.2 ? 80 : 66, .78);
+  northUp();
 };
+/* 俯瞰全台、看整個地區時一律北方朝上（鏡頭在南邊往北看），不沿用觀星點「面向南方」的方位 */
+function northUp(){ if (fly) fly.toP.copy(fly.toT).add(new T.Vector3().setFromSpherical(new T.Spherical(fly.toP.distanceTo(fly.toT), new T.Spherical().setFromVector3(fly.toP.clone().sub(fly.toT)).phi, 0))); }
+var focusRegion0 = S.focusRegion;
+S.focusRegion = function(ids){ endLookUp(); focusRegion0(ids); northUp(); };
 S.focusSpot = function(id){
   var S3 = SPOT3[id]; if (!S3) return;
+  endLookUp();
   S.flyTo(S3.x, S3.z, 3.2 * aspectK(), 1.42, 1.3, S3.y + .7);
   fly.toP.copy(fly.toT).add(new T.Vector3().setFromSpherical(new T.Spherical(3.2 * aspectK(), 1.42, Math.PI)));   // 從北往南看：銀河核心在南方
 };
+/* 仰望星空：鏡頭降到觀星點旁、往南方抬頭約 12°，可以拖曳環顧（地平線到仰角約 40°，往上拖可再抬頭） */
+S.lookUp = function(on){
+  var S3 = selId && SPOT3[selId];
+  if (!S3 || !on){ if (lookUp && S3){ S.focusSpot(selId); } else endLookUp(); return false; }
+  lookUp = true; controls.maxPolarAngle = 2.4;
+  S.flyTo(S3.x, S3.z, 1.2, 1.78, 1.4, S3.y + 1.1);
+  fly.toP.copy(fly.toT).add(new T.Vector3().setFromSpherical(new T.Spherical(1.2, 1.78, Math.PI)));
+  return true;
+};
+S.isLookUp = function(){ return lookUp; };
+/* 星空時間與地點（台灣時間毫秒、緯度、經度） */
+S.setSky = function(ms, lat, lon){ skyT.ms = ms; if (lat != null){ skyT.lat = lat; skyT.lon = lon; } if (S.ready) applySky(); };
+S.setConst = function(on){ showConst = !!on; if (sky.constLines) sky.constLines.forEach(function(L){ L.visible = showConst; }); };
 /* ---------- 對外 ---------- */
 S.setDate = function(y, m, d){ cur = {y:y, m:m, d:d}; if (S.ready) applyDate(); };
 S.selectSpot = function(id){
+  if (id !== selId && lookUp) endLookUp();
   if (selId && SPOT3[selId]){ SPOT3[selId].label.el.classList.remove('on'); SPOT3[selId].label.boost = 0; SPOT3[selId].label.w = 0; }
   selId = id || null;
   if (selId && SPOT3[selId]){ SPOT3[selId].label.el.classList.add('on'); SPOT3[selId].label.boost = 10; SPOT3[selId].label.w = 0; }
@@ -326,12 +465,12 @@ function loop(){
     if (k >= 1) fly = null;
   }
   controls.update();
-  if (sky.stars){ var rot = reduce ? 0 : t * .004; sky.stars.rotation.y = sky.bright.rotation.y = rot; sky.bright.material.size = 3.4 + Math.sin(t * 2.3) * .3; }
+  if (sky.cel){ sky.cel.position.copy(camera.position); sky.clip.constant = -camera.position.y; if (!reduce) sky.bright.material.size = 2.8 + Math.sin(t * 2.3) * .3; }
   SM.SPOTS.forEach(function(p){ var f = SPOT3[p.id].grp.userData.flag; if (f && !reduce) f.rotation.y = Math.sin(t * 3 + SPOT3[p.id].idx) * .3; });
   updateMeteors(t, dt);
   clouds.forEach(function(C){ C.g.position.x += dt * C.v * (reduce ? .3 : 1); if (C.g.position.x > EXT.x1 + 20) C.g.position.x = EXT.x0 - 20; });
   renderer.render(scene, camera);
-  layoutLabels();
+  layoutLabels(); if (sky.cel) layoutSky();
 }
 
 /* ---------- 啟動 ---------- */
@@ -347,6 +486,7 @@ S.init = function(opts){
     LANDC = {under:col('#1d3a40'), sand:col('#3a4652'), plain:col('#2c4a3e'), grass:col('#27463b'), forest:col('#1f3d36'), deep:col('#1b3531'), rock:col('#3d4552'), peak:col('#59607a')};
     renderer = new T.WebGLRenderer({antialias:true, alpha:true});
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.localClippingEnabled = true;
     host.appendChild(renderer.domElement);
     scene = new T.Scene();
     camera = new T.PerspectiveCamera(42, 1, .03, 900);
@@ -395,7 +535,7 @@ S.init = function(opts){
     window.addEventListener('resize', resize); resize();
     if (window.ResizeObserver) new ResizeObserver(resize).observe(host);
     S.ready = true;
-    applyDate();
+    applyDate(); applySky(); S.setConst(showConst);
     S.overview(); fly.dur = .01;
     loop();
   });
@@ -403,6 +543,7 @@ S.init = function(opts){
 S.stats = function(){
   return {spots:Object.keys(SPOT3).length, islands:ISL.length, labels:labels.length, visibleLabels:labels.filter(function(L){ return !L.off; }).length,
     date:cur, illum:NIGHT ? +NIGHT.illum.toFixed(2) : null, darkH:NIGHT ? +NIGHT.darkH.toFixed(1) : null, gcH:NIGHT ? +NIGHT.gcH.toFixed(1) : null,
-    mw:sky.mw ? +sky.mw.material.opacity.toFixed(2) : null, meteorRate:sky.meteorRate || 0, layer:U.layer.value};
+    mw:sky.mw ? +sky.mw.material.opacity.toFixed(2) : null, meteorRate:sky.meteorRate || 0, layer:U.layer.value,
+    sky:{ms:skyT.ms, lat:skyT.lat, moonAlt:skyInfo.moonAlt, gcAlt:skyInfo.gcAlt, sunAlt:skyInfo.sunAlt, tw:skyInfo.tw, lookUp:lookUp, skyLabels:skyLabs.filter(function(L){ return L.on; }).map(function(L){ return L.el.textContent; })}};
 };
 })();

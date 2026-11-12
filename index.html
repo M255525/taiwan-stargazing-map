@@ -166,6 +166,76 @@ a{color:var(--sky)}
 .fcsrc a,.fcnote a{color:var(--sky)}
 .sublbl em{font-style:normal;font-size:10.5px;opacity:.8;margin-left:4px}
 .yc.fc{box-shadow:inset 0 -3px 0 rgba(255,255,255,.75)}
+/* 3D 星空時間、天空文字 */
+.skyt{margin-top:6px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:6px 10px 7px}
+.skyrow{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;font-size:12.5px}
+.skyrow b{color:var(--gold2);font-family:var(--serif)}
+:root[data-theme="light"] .skyrow b{color:#1c2547}
+#skyClock{color:var(--ink);font-variant-numeric:tabular-nums}
+#skyRange{width:100%;margin:6px 0 2px;accent-color:var(--gold)}
+.skybtns{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px}
+.skybtns .abtn{padding:4px 9px;font-size:12px}
+.abtn.on{background:var(--gold);color:#141a33}
+.skyhint{font-size:11px;color:var(--mute);margin-top:4px;line-height:1.5}
+.tl .sel{position:absolute;top:-2px;bottom:-2px;width:2px;margin-left:-1px;background:#fff;box-shadow:0 0 4px #fff;border-radius:1px}
+.skylab{position:absolute;left:0;top:0;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .3s;font-size:10.5px;color:rgba(225,232,255,.85);text-shadow:0 0 4px #000,0 0 2px #000;will-change:transform}
+.skylab.on{opacity:1}
+.skylab.c{font-family:var(--serif);font-size:13px;letter-spacing:.18em;color:rgba(243,220,154,.78)}
+.skylab.tri{font-size:11px;letter-spacing:.1em;color:rgba(143,184,255,.8)}
+.skylab.s{margin-top:-11px}
+.skylab.p{font-weight:700;font-size:12px;color:#ffe9c0;margin-top:-13px}
+/* 觀星護照 */
+.pnote{margin:0 0 10px;font-size:13px;color:var(--ink2);line-height:1.6}
+#pass h3,#logm h3{font-family:var(--serif);margin:16px 0 8px;display:flex;align-items:center;gap:10px;color:var(--gold2)}
+:root[data-theme="light"] #pass h3{color:#1c2547}
+.pstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.pstats div{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--mute)}
+.pstats b{display:block;font-family:var(--serif);font-size:22px;color:var(--gold2)}
+:root[data-theme="light"] .pstats b{color:#7a5c16}
+.stamps{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.stamp{border:2px dashed var(--line);border-radius:50%;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8px;font-size:11.5px;color:var(--mute);background:none;line-height:1.3}
+.stamp b{font-family:var(--serif);font-size:12.5px;color:var(--ink2)}
+.stamp.on{border:3px double #e0604a;color:#e0604a;transform:rotate(-8deg);background:rgba(224,96,74,.08)}
+.stamp.on b{color:#ff8a70}
+.stamp.on:nth-child(2n){transform:rotate(6deg)}
+@media (max-width:480px){.stamps{grid-template-columns:repeat(3,1fr);gap:6px}.stamp{padding:4px;font-size:10px}.stamp b{font-size:11px}.stamp small{font-size:9.5px}.badges{grid-template-columns:1fr 1fr}.badge{font-size:11px;padding:6px}.badge i{font-size:18px}}
+.stamp small{font-size:10.5px}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px}
+.badge{display:flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:7px 9px;font-size:12px;color:var(--mute);opacity:.55}
+.badge i{font-style:normal;font-size:22px;filter:grayscale(1)}
+.badge b{display:block;color:var(--ink2);font-size:13px}
+.badge.on{opacity:1;border-color:var(--gold);background:rgba(230,195,106,.1)}
+.badge.on i{filter:none}
+.badge.on b{color:var(--gold2)}
+.lentry{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px;font-size:13px;color:var(--ink2);background:var(--panel2)}
+.lentry .lh{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.lentry .lh b{color:var(--gold2);font-family:var(--serif)}
+:root[data-theme="light"] .lentry .lh b{color:#1c2547}
+.lentry .lh em{font-style:normal;color:#f0cf6a;letter-spacing:1px}
+.lentry .lh .sbtn{margin-left:auto;padding:2px 8px;font-size:12px}
+.lentry .ls{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.lentry .ls span{font-size:11.5px;border:1px solid var(--line);border-radius:999px;padding:0 8px}
+.lentry p{margin:5px 0 0;line-height:1.6;white-space:pre-wrap}
+.lempty{font-size:13px;color:var(--mute);padding:10px 0}
+.pio{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+label.sbtn{cursor:pointer}
+.sheet.narrow{width:min(480px,100%)}
+.lform{display:flex;flex-direction:column;gap:10px;font-size:13.5px;color:var(--ink2)}
+.lform label{display:flex;flex-direction:column;gap:4px}
+.lform input,.lform select,.lform textarea{font:inherit;font-size:15px;padding:7px 9px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink)}
+.lform fieldset{border:0;padding:0;margin:0}
+.lform legend{padding:0;margin-bottom:4px}
+.sawchips{display:flex;flex-wrap:wrap;gap:6px}
+.sawchips label{flex-direction:row;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer;background:var(--panel2)}
+.sawchips label:has(input:checked){border-color:var(--gold);background:rgba(230,195,106,.18);color:var(--gold2)}
+.sawchips input{accent-color:var(--gold)}
+.rate{display:flex;gap:2px}
+.rate button{border:0;background:none;font-size:28px;line-height:1;padding:0 2px;color:var(--mute)}
+.rate button.on{color:#f0cf6a}
+.lerr{margin:0;color:var(--red);font-size:13px;min-height:1em}
+.lbtns{display:flex;gap:8px;flex-wrap:wrap}
+.lbtns .abtn{font-size:14px;padding:7px 14px}
+.visited{color:#ff8a70;font-weight:700}
 /* 分享、行事曆、推薦夜晚 */
 .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .abtn{border:1px solid var(--edge);background:rgba(230,195,106,.12);color:var(--gold2);border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:700}
@@ -366,6 +436,7 @@ button.chip:hover,a.chip:hover{border-color:var(--gold);color:var(--gold)}
 <div id="tools" class="ui">
   <button class="tbtn" id="btnAll" type="button">🗺 看全台灣</button>
   <button class="tbtn hl" id="btnEtq" type="button">🔭 觀星須知</button>
+  <button class="tbtn" id="btnPass" type="button">🎫 觀星護照</button>
   <button class="tbtn" id="btnSet" type="button">⚙ 常用設定</button>
   <button class="tbtn" id="installBtn" type="button">📲 加入主畫面</button>
   <button class="tbtn" id="btnAbout" type="button">⚠ 使用警語</button>
@@ -401,6 +472,39 @@ button.chip:hover,a.chip:hover{border-color:var(--gold);color:var(--gold)}
   </div>
 </div>
 
+<div id="pass" class="modal pad" role="dialog" aria-modal="true" aria-labelledby="passTitle">
+  <div class="sheet">
+    <button class="x" type="button" data-close aria-label="關閉">✕</button>
+    <h2 id="passTitle">🎫 我的觀星護照</h2>
+    <p class="pnote">每次去觀星記一筆，就會在那個觀星點蓋上印章。紀錄<b>只存在這台裝置的瀏覽器</b>，不會上傳；換手機或清除瀏覽資料前，請先「匯出備份」。</p>
+    <div class="pstats" id="passStats"></div>
+    <h3>印章牆</h3>
+    <div class="stamps" id="passStamps"></div>
+    <h3>成就徽章</h3>
+    <div class="badges" id="passBadges"></div>
+    <h3>觀星紀錄 <button type="button" class="abtn" id="passAdd">✍ 新增一筆</button></h3>
+    <div id="passList"></div>
+    <div class="pio"><button type="button" class="sbtn" id="passExport">⬇ 匯出備份（JSON）</button><label class="sbtn" for="passImport">⬆ 匯入備份</label><input type="file" id="passImport" accept="application/json,.json" hidden></div>
+  </div>
+</div>
+
+<div id="logm" class="modal pad" role="dialog" aria-modal="true" aria-labelledby="logTitle">
+  <div class="sheet narrow">
+    <button class="x" type="button" data-close aria-label="關閉">✕</button>
+    <h2 id="logTitle">✍ 記錄這晚</h2>
+    <div class="lform">
+      <label>日期<input type="date" id="logDate"></label>
+      <label>觀星點<select id="logSpot"></select></label>
+      <fieldset><legend>看到了</legend><div class="sawchips" id="logSaw"></div></fieldset>
+      <label>流星（顆，沒數就填 0）<input type="number" id="logMet" min="0" max="999" step="1" inputmode="numeric"></label>
+      <fieldset><legend>這晚滿意度</legend><div class="rate" id="logRate"></div></fieldset>
+      <label>心得（選填，最多 300 字）<textarea id="logNote" maxlength="300" rows="3" placeholder="例如：凌晨兩點後雲散了，銀河超清楚；風很大要多穿"></textarea></label>
+      <p class="lerr" id="logErr" role="alert"></p>
+      <div class="lbtns"><button type="button" class="abtn" id="logSave">💾 儲存，蓋章！</button><button type="button" class="sbtn" id="logDel" hidden>🗑 刪除這筆</button></div>
+    </div>
+  </div>
+</div>
+
 <div id="settings" class="modal pad" role="dialog" aria-modal="true" aria-labelledby="setTitle">
   <div class="sheet">
     <button class="x" type="button" data-close aria-label="關閉">✕</button>
@@ -417,6 +521,8 @@ button.chip:hover,a.chip:hover{border-color:var(--gold);color:var(--gold)}
         <select id="setMotion"><option value="auto">跟隨系統</option><option value="full">完整動畫</option><option value="reduce">減少動態</option></select></div></details>
     <details class="set-sec" data-sec="play"><summary><span>▶ 自動播放速度</span><em id="sv-play"></em></summary>
       <div class="set-body"><select id="setPlay"><option value="1500">慢（每 1.5 秒一天）</option><option value="900">標準（每 0.9 秒一天）</option><option value="450">快（每 0.45 秒一天）</option></select></div></details>
+    <details class="set-sec" data-sec="sky"><summary><span>✨ 星座連線與名稱</span><em id="sv-sky"></em></summary>
+      <div class="set-body"><label class="ck"><input type="checkbox" id="setSky"> 在 3D 星空畫星座連線、標示亮星與行星名稱（仰望星空時看得最清楚）</label></div></details>
     <details class="set-sec" data-sec="red"><summary><span>🔴 紅光夜視模式</span><em id="sv-red"></em></summary>
       <div class="set-body">到了觀星現場再打開：整個畫面變成暗紅色，看手機時眼睛不用重新適應黑暗（約需 20～30 分鐘）。手機亮度也請調到最低。
         <label class="ck"><input type="checkbox" id="setRed"> 開啟紅光模式（上方「🔴 紅光」按鈕也可以切換）</label></div></details>
