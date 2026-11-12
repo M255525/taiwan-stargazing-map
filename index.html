@@ -148,6 +148,24 @@ a{color:var(--sky)}
 .tlnote{grid-column:1/-1;font-size:10.5px;color:var(--mute);line-height:1.5}
 .tlnote i{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:-1px;margin:0 2px 0 6px}
 .tlnote i:first-child{margin-left:0}
+/* 行星、雲量預報 */
+.plist{margin-top:6px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:5px 10px 6px}
+.plist .sublbl{margin-top:0}
+.pl{display:flex;flex-wrap:wrap;align-items:center;gap:2px 7px;font-size:12px;color:var(--ink2);padding:2px 0;border-top:1px dashed var(--line)}
+.plist .sublbl+.pl{border-top:0}
+.pl i{width:9px;height:9px;border-radius:50%;flex:none}
+.pl b{color:var(--gold2);font-family:var(--serif)}
+:root[data-theme="light"] .pl b{color:#1c2547}
+.pl em{font-style:normal;font-size:11px;color:var(--mute)}
+.pl span{flex-basis:100%;padding-left:16px;line-height:1.45}
+.pl.none{color:var(--mute)}
+.plh{font-size:11px;color:var(--mute);margin-top:2px;line-height:1.5}
+.fcb{font-weight:700;color:var(--ink)}
+.fcsrc,.fcnote{font-size:11px;color:var(--mute)}
+.fcnote{margin-top:5px}
+.fcsrc a,.fcnote a{color:var(--sky)}
+.sublbl em{font-style:normal;font-size:10.5px;opacity:.8;margin-left:4px}
+.yc.fc{box-shadow:inset 0 -3px 0 rgba(255,255,255,.75)}
 /* 分享、行事曆、推薦夜晚 */
 .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .abtn{border:1px solid var(--edge);background:rgba(230,195,106,.12);color:var(--gold2);border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:700}
@@ -339,7 +357,7 @@ button.chip:hover,a.chip:hover{border-color:var(--gold);color:var(--gold)}
   </div>
   <div id="list"></div>
   <div id="panelFoot">
-    <span class="warnline">⚠ 月相與暗夜時間依天文公式計算；晴夜機會、光害等級與觀星指數是粗估，不是天氣預報。出發前請看雲量預報。<button type="button" id="btnEtq2">觀星須知</button></span>
+    <span class="warnline">⚠ 月相、行星與暗夜時間依天文公式計算；7 天內的指數用 Open-Meteo 雲量模式預報（仍可能不準），更遠的日期與光害等級都是粗估。出發前請再看中央氣象署預報。<button type="button" id="btnEtq2">觀星須知</button></span>
     <span>創作者：<button type="button" id="btnCreator">Mark Tsai（蔡豐全）</button></span>
     <img src="https://visitor-badge.laobi.icu/badge?page_id=m255525.taiwanstargazingmap" alt="訪客次數" height="20">
   </div>
@@ -427,7 +445,7 @@ button.chip:hover,a.chip:hover{border-color:var(--gold);color:var(--gold)}
       <strong>使用警語</strong>
       <ul>
         <li>月相、月出月落、天文昏影與銀河核心高度，是本工具用天文年鑑的<b>低精度公式</b>自行計算，時間誤差約數分鐘，並以台灣中部（或各觀星點座標）估算；需要精確時刻請查中央氣象署或天文台的天文資料。</li>
-        <li><b>晴夜機會、光害等級、觀星指數都是粗估</b>：晴夜機會只依季風、梅雨、颱風等一般氣候特徵，<b>不是天氣預報</b>；光害等級是本工具依地點環境估計，不是實測值。出發前請看中央氣象署的雲量與山區天氣預報。</li>
+        <li><b>晴夜機會、光害等級、觀星指數都是粗估</b>：約 7 天內的日期改用 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> 的雲量模式預報（以觀星點座標查詢，山區、雲海變化大，仍可能不準）；更遠的日期只依季風、梅雨、颱風等一般氣候特徵，<b>不是天氣預報</b>。行星位置用 JPL 近似軌道根數自行計算，時間誤差約數分鐘；光害等級是本工具依地點環境估計，不是實測值。出發前請看中央氣象署的雲量與山區天氣預報。</li>
         <li>國際暗空認證（合歡山暗空公園、拉拉山暗空勝地）可能因複查結果改變，正在申請的地點以官方公告為準；台東「最美星空」星等依縣府評選。流星雨日期與 ZHR 參考國際流星組織（IMO）年曆，實際數量通常少很多。</li>
         <li>高山夜晚低溫、結冰、強風與高山症都有危險；山路夜間落石多、彎多，請量力而為。海邊崖邊夜間看不清楚，不要靠近。地圖上的光害光暈、山高與位置都經過簡化，不可用於導航。</li>
         <li>本工具為個人製作的教學工具，與國際暗空協會、各觀星點管理單位、國家公園及縣市政府無關，也不代表推薦或背書。</li>

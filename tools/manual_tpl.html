@@ -40,7 +40,7 @@ p,li{color:var(--ink2)}
 <li><b>🌑 下一個好夜晚</b>：沒選觀星點時，往後找第一個無月暗夜 6 小時以上、且有觀星點指數 5 的晚上；選了觀星點時，改找「這個點」60 天內能達到最高指數的下一晚（光害較多的點不一定到得了 5）。</li>
 <li><b>🔴 紅光</b>：紅光夜視模式，整個畫面變成暗紅色，在觀星現場看手機不會破壞眼睛的暗適應；手機亮度也請調到最低。</li>
 <li><b>💡 光害圖層</b>：地圖上的橘黃色光暈是主要城市的光害示意（不是實測）。</li>
-<li><b>右側面板</b>：沒選觀星點時顯示當晚的夜空資訊與觀星點排行；點觀星點會飛過去，顯示認證、當晚的月相與暗夜時段、流星雨、晴夜機會、未來兩週指數（點格子可以換日期）、「接下來最適合去的晚上」3 晚、亮點、建議裝備與注意事項。</li>
+<li><b>右側面板</b>：沒選觀星點時顯示當晚的夜空資訊、看得到的行星與觀星點排行；點觀星點會飛過去，顯示認證、當晚的月相與暗夜時段、行星、流星雨、雲量預報（7 天內）或晴夜機會、未來兩週指數（點格子可以換日期）、「接下來最適合去的晚上」3 晚、亮點、建議裝備與注意事項。</li>
 <li><b>逐小時時間軸</b>：月相資訊下方的四條色帶，橫軸是 18:00～隔天 06:00——「天色」越深越暗（最深＝天文昏影結束）、「月亮」是月亮在天上的時段（越亮代表月光越強）、「暗夜」金色是沒有月光的全黑時段、「銀河」紫色是銀河核心在南方可見的時段；看今晚時，紅線標示現在時間。</li>
 <li><b>🔗 分享這晚／📅 加入行事曆</b>：分享會帶出含日期與觀星點的連結（手機用系統分享，電腦複製到剪貼簿，可直接貼到 LINE）；網址列也會隨時更新成這個連結。行事曆會下載 .ics 檔，時段是當晚的無月暗夜（沒有暗夜就用天黑到天亮），出發前 3 小時提醒。</li>
 <li><b>⚙ 常用設定</b>（收合式）：開啟時的日期、光害圖層、觀星點名稱、動畫、自動播放速度、紅光夜視模式、介面配色（夜空星圖／紙本星圖）；底部「關於本工具」集中操作手冊、使用警語、創作者資訊、加入主畫面與訪客數。</li>
@@ -52,7 +52,9 @@ p,li{color:var(--ink2)}
 <ul>
 <li><b>天文計算</b>（astro.js，自行實作）：太陽位置用天文年鑑的低精度公式（誤差約 0.01°）、月亮位置用 Meeus 的低精度公式（黃經誤差約 0.3°，含視差修正），從當天中午到隔天中午每 5 分鐘算一次太陽、月亮與銀河中心（人馬座 A*）的高度。天文昏影＝太陽低於地平線 18°；月亮高於地平線且照亮比例超過 6% 的時段不算暗夜；銀河核心高於地平線 10° 且在暗夜中的時間算「銀河核心可見」。時間誤差約數分鐘。</li>
 <li><b>觀星指數</b>：暗空程度（光害 1～5 級換成 1～0.2）×（0.22＋0.78×無月暗夜時數／6 小時，最多算 1）× 晴夜機會，再依銀河核心可見時數加一點，換算成 1～5。</li>
-<li><b>晴夜機會</b>：依地區與月份的一般氣候特徵粗估——東北季風（北部、宜蘭最明顯；花東較輕；2,500 公尺以上的高山常在雲海之上）、梅雨、颱風季、午後雷陣雨（高山夜裡多半放晴）、離島季風、馬祖春季海霧與夏秋漁船燈光。不是天氣預報。</li>
+<li><b>行星</b>：用美國 JPL 公布的行星近似軌道根數（1800～2050 年適用）自行計算金星、木星、火星、土星、水星的位置與亮度（星等），太陽低於地平線 6° 以後、行星高於地平線（水星、金星 4°，其他 8°）就算看得到；面板列出可見時段、最高的時間、方位與高度。土星星等沒算光環，實際可能再亮一點。</li>
+<li><b>雲量預報</b>：約 7 天內（含今晚）的日期，指數改用 <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> 以各觀星點座標與海拔查到的逐小時雲量（暗夜時段平均，沒有暗夜就用天黑到天亮）取代晴夜機會：雲量 0% 算 1、50% 約 0.54、100% 約 0.08。這是數值模式預報，山區與雲海變化大，仍可能不準；面板也會顯示夜間低溫、時間軸多一條「雲量」。預報資料每小時最多更新一次，暫存在這台裝置。</li>
+<li><b>晴夜機會</b>（超過預報範圍的日期）：依地區與月份的一般氣候特徵粗估——東北季風（北部、宜蘭最明顯；花東較輕；2,500 公尺以上的高山常在雲海之上）、梅雨、颱風季、午後雷陣雨（高山夜裡多半放晴）、離島季風、馬祖春季海霧與夏秋漁船燈光。不是天氣預報。</li>
 <li><b>光害等級</b>：本工具依地點環境（海拔、離城市距離、公開資料的暗空估計）自行估計，不是 SQM 或 Bortle 實測值。</li>
 </ul>
 <table>
@@ -111,7 +113,7 @@ p,li{color:var(--ink2)}
 <li>月相與時間是低精度公式計算，誤差約數分鐘；晴夜機會、光害等級與觀星指數都是粗估，不是預報。</li>
 <li>海岸線、山的高度、觀星點位置與光害光暈都經過簡化，距離很近的觀星點會分開排列；面向南方視角裡的銀河與月亮位置是示意，實際方位請用星圖 App 查。</li>
 <li>本工具為個人製作的教學工具，與國際暗空協會、各觀星點管理單位、國家公園及縣市政府無關，也不代表推薦或背書。</li>
-<li>3D 地圖需要網路下載繪圖元件。你看的日期、觀星點與常用設定只記在這台裝置的瀏覽器，不會上傳。</li>
+<li>3D 地圖需要網路下載繪圖元件；雲量預報會用觀星點座標向 Open-Meteo 查詢（不含你的位置或個人資料）。你看的日期、觀星點與常用設定只記在這台裝置的瀏覽器，不會上傳。</li>
 <li>本工具的文字說明、介面與 3D 模型僅供教學、課程及個人使用，禁止未經授權公開發布、販售或商業化使用。</li>
 </ul>
 </section>
@@ -119,6 +121,8 @@ p,li{color:var(--ink2)}
 <section id="sources">
 <h2>資料來源</h2>
 <ul>
+<li>雲量與氣溫預報：<a href="https://open-meteo.com/" target="_blank" rel="noopener">Weather data by Open-Meteo.com</a>（CC BY 4.0）。</li>
+<li>行星位置：E. M. Standish（JPL），<a href="https://ssd.jpl.nasa.gov/planets/approx_pos.html" target="_blank" rel="noopener">Approximate Positions of the Planets</a>；星等用 Mallama 等人的簡化公式。</li>
 <li>天文計算：Jean Meeus《Astronomical Algorithms》與天文年鑑（Astronomical Almanac）的低精度太陽、月亮位置公式，自行實作。</li>
 <li>暗空認證與觀星點：<a href="https://travel.nantou.gov.tw/dark-sky-park/" target="_blank" rel="noopener">南投縣政府：合歡山暗空公園</a>、<a href="https://www.storm.mg/article/1553197" target="_blank" rel="noopener">風傳媒：合歡山成為台灣第一座國際暗空公園</a>、<a href="https://news.pts.org.tw/article/831201" target="_blank" rel="noopener">公視：桃園拉拉山獲國際暗空勝地認證</a>、<a href="https://udn.com/news/story/7324/9809304" target="_blank" rel="noopener">聯合報：拉拉山全台首座暗空勝地</a>、<a href="https://esg.gvm.com.tw/article/115700" target="_blank" rel="noopener">遠見：拉拉山、恆春接棒合歡山</a>、<a href="https://www.gvm.com.tw/article/120240" target="_blank" rel="noopener">遠見：墾丁星空之城</a>、<a href="https://www.marieclaire.com.tw/lifestyle/travel/79835/starry-taitung-2024" target="_blank" rel="noopener">美麗佳人：2024 台東最美星空 14 個觀星點</a>、<a href="https://news.pts.org.tw/article/598436" target="_blank" rel="noopener">公視：大坵申請國際暗空公園</a>、<a href="https://e-info.org.tw/node/233021" target="_blank" rel="noopener">環境資訊中心：馬祖光害管制條例</a>、<a href="https://www.merit-times.com/NewsPage.aspx?unid=646559" target="_blank" rel="noopener">人間福報：馬祖大坵拚暗空公園</a>、<a href="https://starwindow.info/dark-sky" target="_blank" rel="noopener">starwindow：台灣暗空地圖（高山觀星點暗空估計）</a>，2026-11 整理。</li>
 <li>流星雨：國際流星組織（IMO）2026 年流星雨年曆，參考 <a href="https://en.wikipedia.org/wiki/List_of_meteor_showers" target="_blank" rel="noopener">Wikipedia: List of meteor showers</a> 的整理。</li>

@@ -225,19 +225,25 @@ SM.weather = function(p, m){
   });
   return {wx:wx, f:f};
 };
-/* 某觀星點某天晚上的觀星指數 */
+/* 雲量預報（app.js 讀到 Open-Meteo 後會設定 SM.fcNight(p, night) → {cloud, tmin, hours} 或 null） */
+SM.fcNight = null;
+SM.cloudF = function(c){ return Math.max(.08, 1 - .92 * c / 100); };   // 雲量 0% → 1、50% → .54、100% → .08
+SM.cloudName = function(c){ return c < 20 ? '晴朗' : c < 45 ? '少雲' : c < 75 ? '多雲' : '陰天'; };
+/* 某觀星點某天晚上的觀星指數（7 天內有雲量預報就用預報取代氣候粗估的晴夜機會） */
 SM.score = function(p, y, m, d){
   var n = window.AS.night(y, m, d, p.at[1], p.at[0]), w = SM.weather(p, m);
+  var fc = SM.fcNight ? SM.fcNight(p, n) : null, f = fc ? SM.cloudF(fc.cloud) : w.f;
   var site = (6 - p.lp) / 5;
   var dark = Math.min(1, n.darkH / 6);
-  var v = site * (.22 + .78 * dark) * w.f;
-  v += Math.min(.12, n.gcH / 4 * .12) * site * w.f;            // 銀河核心可見加一點
+  var v = site * (.22 + .78 * dark) * f;
+  v += Math.min(.12, n.gcH / 4 * .12) * site * f;            // 銀河核心可見加一點
   var score = Math.max(1, Math.min(5, Math.round(1 + 4.4 * v)));
   var why = [];
   if (n.darkH < 1) why.push('整晚月光'); else if (n.darkH < 4) why.push('無月暗夜只有 ' + n.darkH.toFixed(1) + ' 小時');
   if (p.lp >= 4) why.push('光害較多');
-  w.wx.forEach(function(c){ why.push(SM.WXTYPES[c].name); });
-  return {score:score, night:n, wx:w.wx, clear:w.f, why:why, v:v};
+  if (fc) why.push('預報' + SM.cloudName(fc.cloud) + '（雲量 ' + Math.round(fc.cloud) + '%）');
+  else w.wx.forEach(function(c){ why.push(SM.WXTYPES[c].name); });
+  return {score:score, night:n, wx:w.wx, clear:f, fc:fc, why:why, v:v};
 };
 SM.SCORES = [
   null,
@@ -258,6 +264,7 @@ SM.gear = function(p, r){
   var g = ['紅光手電筒', '保暖外套'];
   if (p.elev >= 1500) g.push('羽絨衣、毛帽手套');
   if (p.elev >= 2500) g.push('暖暖包、熱飲', '注意高山症');
+  if (r.fc && r.fc.tmin != null && r.fc.tmin <= 3 && p.elev >= 1500) g.push('預報低溫 ' + Math.round(r.fc.tmin) + '°C：路面可能結冰，注意封路與雪鏈規定');
   if (r.night.gcH > 0 || r.night.darkH >= 3) g.push('相機腳架（拍銀河／星軌）');
   if (p.type === 'coast' || p.type === 'island' || r.wx.indexOf('wd') >= 0) g.push('防風外套、壓腳架的重物');
   if (p.elev < 1000 && r.night.m >= 4 && r.night.m <= 10) g.push('防蚊液');

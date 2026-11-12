@@ -88,6 +88,80 @@ AS.night = function(y, m, d, lat, lon){
   CACHE[key] = r;
   return r;
 };
+/* ---------- 行星：JPL「Approximate Positions of the Planets」近似軌道根數（1800–2050 年適用，誤差約 1 角分內；之後誤差漸增仍夠觀星用） ----------
+ * 每顆行星：a, a', e, e', I, I', L, L', ϖ, ϖ', Ω, Ω'（J2000 值與每世紀變化量）；亮度用 Mallama 簡化星等公式（土星不含光環，實際約亮 0～0.5 等）。 */
+var PL_EL = {
+  earth:  [1.00000261, .00000562, .01671123, -.00004392, -.00001531, -.01294668, 100.46457166, 35999.37244981, 102.93768193, .32327364, 0, 0],
+  mercury:[.38709927, .00000037, .20563593, .00001906, 7.00497902, -.00594749, 252.25032350, 149472.67411175, 77.45779628, .16047689, 48.33076593, -.12534081],
+  venus:  [.72333566, .00000390, .00677672, -.00004107, 3.39467605, -.00078890, 181.97909950, 58517.81538729, 131.60246718, .00268329, 76.67984255, -.27769418],
+  mars:   [1.52371034, .00001847, .09339410, .00007882, 1.84969142, -.00813131, -4.55343205, 19140.30268499, -23.94362959, .44441088, 49.55953891, -.29257343],
+  jupiter:[5.20288700, -.00011607, .04838624, -.00013253, 1.30439695, -.00183714, 34.39644051, 3034.74612775, 14.72847983, .21252668, 100.47390909, .20469106],
+  saturn: [9.53667594, -.00125060, .05386179, -.00050991, 2.48599187, .00193609, 49.95424423, 1222.49362201, 92.59887831, -.41897216, 113.66242448, -.28867794]
+};
+var PLANETS = [
+  {id:'venus',   name:'金星', c:'#fff4c8', minAlt:4, mag:function(a){ return -4.40 + .0009 * a + .000239 * a * a - .00000065 * a * a * a; }},
+  {id:'jupiter', name:'木星', c:'#ffe0b0', minAlt:8, mag:function(a){ return -9.40 + .005 * a; }},
+  {id:'mars',    name:'火星', c:'#ff9a70', minAlt:8, mag:function(a){ return -1.52 + .016 * a; }},
+  {id:'saturn',  name:'土星', c:'#f0dca0', minAlt:8, mag:function(){ return -8.88; }},
+  {id:'mercury', name:'水星', c:'#d8d0c0', minAlt:4, mag:function(a){ return -.42 + .0380 * a - .000273 * a * a + .000002 * a * a * a; }}
+];
+AS.PLANETS = PLANETS;
+function helio(el, T){
+  var a = el[0] + el[1] * T, e = el[2] + el[3] * T, I = el[4] + el[5] * T, L = el[6] + el[7] * T, wb = el[8] + el[9] * T, O = el[10] + el[11] * T;
+  var w = wb - O, M = norm(L - wb); if (M > 180) M -= 360;
+  var Mr = M * D2R, E = Mr + e * Math.sin(Mr);
+  for (var k = 0; k < 8; k++) E -= (E - e * Math.sin(E) - Mr) / (1 - e * Math.cos(E));
+  var xp = a * (Math.cos(E) - e), yp = a * Math.sqrt(1 - e * e) * Math.sin(E);
+  var cw = cos(w), sw = sin(w), cO = cos(O), sO = sin(O), cI = cos(I), sI = sin(I);
+  return [(cw * cO - sw * sO * cI) * xp + (-sw * cO - cw * sO * cI) * yp,
+          (cw * sO + sw * cO * cI) * xp + (-sw * sO + cw * cO * cI) * yp,
+          (sw * sI) * xp + (cw * sI) * yp];
+}
+/* 某瞬間某行星的赤經赤緯（J2000）、與太陽的角距、星等 */
+AS.planetPos = function(id, ms){
+  var T = (jd(ms) - 2451545) / 36525, E = helio(PL_EL.earth, T), P = helio(PL_EL[id], T);
+  var g = [P[0] - E[0], P[1] - E[1], P[2] - E[2]];
+  var D = Math.hypot(g[0], g[1], g[2]), r = Math.hypot(P[0], P[1], P[2]), R = Math.hypot(E[0], E[1], E[2]);
+  var eps = 23.43928, xe = g[0], ye = g[1] * cos(eps) - g[2] * sin(eps), ze = g[1] * sin(eps) + g[2] * cos(eps);
+  var elong = Math.acos(Math.max(-1, Math.min(1, -(g[0] * E[0] + g[1] * E[1] + g[2] * E[2]) / (D * R)))) * R2D;
+  var ph = Math.acos(Math.max(-1, Math.min(1, (r * r + D * D - R * R) / (2 * r * D)))) * R2D;
+  var pl = PLANETS.filter(function(p){ return p.id === id; })[0];
+  return {ra:norm(Math.atan2(ye, xe) * R2D), dec:Math.asin(ze / D) * R2D, dist:D, elong:elong, mag:pl.mag(ph) + 5 * Math.log10(r * D)};
+};
+/* 方位角（由北往東量） */
+AS.az = function(J, lat, lon, ra, dec){
+  var H = (gmst(J) + lon - ra) * D2R;
+  return norm(Math.atan2(Math.sin(H), Math.cos(H) * sin(lat) - Math.tan(dec * D2R) * cos(lat)) * R2D + 180);
+};
+var DIRS = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];
+AS.dirName = function(az){ return DIRS[Math.round(norm(az) / 45) % 8]; };
+/* 某天晚上各行星什麼時候看得到：太陽低於 −6°（天色夠暗）且行星高於地平 minAlt 度；每 10 分鐘取樣 */
+var PCACHE = {};
+AS.planets = function(y, m, d, lat, lon){
+  lat = lat == null ? 23.7 : lat; lon = lon == null ? 121.0 : lon;
+  var key = y + '-' + m + '-' + d + '@' + lat.toFixed(1) + ',' + lon.toFixed(1);
+  if (PCACHE[key]) return PCACHE[key];
+  var n = AS.night(y, m, d, lat, lon), S = n.samp.sun, out = [];
+  PLANETS.forEach(function(p){
+    var pos = AS.planetPos(p.id, n.t0 + 12 * 3600000), from = null, to = null, best = null, bestAlt = -99, bestAz = 0;
+    for (var i = 0; i < S.length; i += 2){
+      if (S[i] >= -6) continue;
+      var ms = n.t0 + i * n.step, J = jd(ms), a = alt(J, lat, lon, pos.ra, pos.dec);
+      if (a > p.minAlt){ if (from === null) from = ms; to = ms; if (a > bestAlt){ bestAlt = a; best = ms; bestAz = AS.az(J, lat, lon, pos.ra, pos.dec); } }
+    }
+    var when = '';
+    if (from !== null){
+      var c0 = null, c1 = null; for (var j = 0; j < S.length; j++) if (S[j] < -6){ if (c0 === null) c0 = n.t0 + j * n.step; c1 = n.t0 + j * n.step; }
+      var atStart = from - c0 <= 40 * 60000, atEnd = c1 - to <= 40 * 60000, span = (to - from) / 3600000;
+      when = atStart && atEnd ? '整晚' : atStart ? (span < 3 ? '傍晚' : '前半夜') : atEnd ? (span < 3 ? '清晨' : '後半夜') : '午夜前後';
+    }
+    out.push({id:p.id, name:p.name, c:p.c, mag:pos.mag, elong:pos.elong, visible:from !== null, from:from, to:to, best:best, bestAlt:bestAlt, bestAz:bestAz, dir:AS.dirName(bestAz), when:when,
+      hours:from === null ? 0 : (to - from) / 3600000 + 1 / 6, why:from !== null ? '' : pos.elong < 18 ? '太靠近太陽' : '天黑時在地平線下'});
+  });
+  out.sort(function(a, b){ return (b.visible - a.visible) || (a.mag - b.mag); });
+  PCACHE[key] = out;
+  return out;
+};
 AS.daysIn = function(y, m){ return new Date(Date.UTC(y, m, 0)).getUTCDate(); };
 AS.addDays = function(y, m, d, k){ var t = new Date(Date.UTC(y, m - 1, d + k)); return [t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate()]; };
 AS.doy = function(y, m, d){ return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 1)) / 86400000) + 1; };

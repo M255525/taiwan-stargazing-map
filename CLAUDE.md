@@ -19,8 +19,10 @@
 - `AS.night()` 另回傳 `t0/step/samp{sun,moon,gc}`（當天中午起每 5 分鐘的高度），給面板的**逐小時時間軸**（`timeline()`，18:00～06:00 四條色帶＋現在紅線）。
 - **分享連結**：`#d=YYYY-MM-DD&s=spotId`，啟動時優先於記住的設定，`save()` 用 `replaceState` 隨時同步網址；🔗 分享（`navigator.share` 或剪貼簿）、📅 `.ics`（無月暗夜時段、`-PT3H` 提醒、RFC 5545 折行）。
 - **下一個好夜晚**：選了觀星點時改用 `spotCands()`（60 天內該點最高指數、優先暗夜 ≥ 4h），面板顯示前 3 晚；光害 4 的點最高只到 2～3，所以不能用固定門檻 5。
+- **行星**：`astro.js` 的 `AS.planetPos / AS.planets(y,m,d,lat,lon)`（JPL 近似軌道根數＋Mallama 星等，太陽 < −6° 且高度 > 4°／8° 算可見，每 10 分鐘取樣、有快取）；面板 `planetBox()`。驗證：2026-01-10 木星衝角距 179.7°、10-04 土星衝 177°、08-15 金星東大距 45.9°、01-09 火星合日 0.9°。
+- **雲量預報**：`fcFetch()` 一次查 15 點 Open-Meteo（`past_days=1&forecast_days=8`，帶 `elevation`），快取 `taiwanStarForecast` 1 小時（6 小時內仍可用）；設定 `SM.fcNight(p, night)` 後 `SM.score` 改用雲量係數 `SM.cloudF`（取代氣候晴夜機會），回傳 `r.fc{cloud,tmin,src}`；時間軸多「雲量」列、兩週格子底線＝預報。讀不到就退回氣候粗估。需標示 Open-Meteo（CC BY 4.0）。
 - **紅光夜視模式**：`#redveil` 全螢幕 `mix-blend-mode:multiply` 暗紅遮罩（z-index 99999，含 3D 與對話框），`set.red`，上方按鈕與⚙皆可切。
-- `app.js`：測試 hook `window.__star`（`state/setDate/shiftDay/selectSpot/selectRegion/setLayer/nextGood/spotCands/shareUrl/shareText/buildIcs/toast/SM/AS/scene`）；`scene.stats()` 有 `illum/darkH/gcH/mw/meteorRate`。
+- `app.js`：測試 hook `window.__star`（`state/setDate/shiftDay/selectSpot/selectRegion/setLayer/nextGood/fcFetch/fc/planetBox/spotCands/shareUrl/shareText/buildIcs/toast/SM/AS/scene`）；`scene.stats()` 有 `illum/darkH/gcH/mw/meteorRate`。
 
 ## 配套
 - ✅ 跑馬燈（`taiwanStarMarquee`）、manual、使用警語（底部＋首訪自動跳，`taiwanStarSeenWarning`）、⚙常用設定收合式（`taiwanStarSettings`；展開 `taiwanStarSetOpen`）、偏好 `taiwanStarPrefs`、PWA（改 js 記得 `CACHE_NAME` +1）、訪客計數器 `page_id=m255525.taiwanstargazingmap`、RWD（375px 無橫向捲動；手機日期條可橫向捲動）。
