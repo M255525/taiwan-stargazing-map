@@ -16,7 +16,11 @@
 - **`scene.js` 是產出檔**：改 `tools/scene_tpl.js`，再跑 `python tools/build_scene.py ../taiwan-flower-map/scene.js`。樣板覆寫了 `S.overview`（polar .78）與 `S.focusSpot`（距離 3.2、polar 1.42、target 抬高 .7，並把鏡頭放在北邊**面向南**，因為銀河帶與月亮是放在南方天空的示意）。`controls.maxPolarAngle = 1.5`。
 - 銀河是 canvas 畫的長條貼圖（亮核心＋暗帶＋細星），掛在南方天空的平面上（`sky.mw`）；用點雲畫會變成一團團白霧，別改回去。
 - 測試前若改了 scene.js，瀏覽器常用快取：先 `fetch('scene.js',{cache:'reload'})` 或 unregister SW。
-- `app.js`：測試 hook `window.__star`（`state/setDate/shiftDay/selectSpot/selectRegion/setLayer/nextGood/SM/AS/scene`）；`scene.stats()` 有 `illum/darkH/gcH/mw/meteorRate`。
+- `AS.night()` 另回傳 `t0/step/samp{sun,moon,gc}`（當天中午起每 5 分鐘的高度），給面板的**逐小時時間軸**（`timeline()`，18:00～06:00 四條色帶＋現在紅線）。
+- **分享連結**：`#d=YYYY-MM-DD&s=spotId`，啟動時優先於記住的設定，`save()` 用 `replaceState` 隨時同步網址；🔗 分享（`navigator.share` 或剪貼簿）、📅 `.ics`（無月暗夜時段、`-PT3H` 提醒、RFC 5545 折行）。
+- **下一個好夜晚**：選了觀星點時改用 `spotCands()`（60 天內該點最高指數、優先暗夜 ≥ 4h），面板顯示前 3 晚；光害 4 的點最高只到 2～3，所以不能用固定門檻 5。
+- **紅光夜視模式**：`#redveil` 全螢幕 `mix-blend-mode:multiply` 暗紅遮罩（z-index 99999，含 3D 與對話框），`set.red`，上方按鈕與⚙皆可切。
+- `app.js`：測試 hook `window.__star`（`state/setDate/shiftDay/selectSpot/selectRegion/setLayer/nextGood/spotCands/shareUrl/shareText/buildIcs/toast/SM/AS/scene`）；`scene.stats()` 有 `illum/darkH/gcH/mw/meteorRate`。
 
 ## 配套
 - ✅ 跑馬燈（`taiwanStarMarquee`）、manual、使用警語（底部＋首訪自動跳，`taiwanStarSeenWarning`）、⚙常用設定收合式（`taiwanStarSettings`；展開 `taiwanStarSetOpen`）、偏好 `taiwanStarPrefs`、PWA（改 js 記得 `CACHE_NAME` +1）、訪客計數器 `page_id=m255525.taiwanstargazingmap`、RWD（375px 無橫向捲動；手機日期條可橫向捲動）。

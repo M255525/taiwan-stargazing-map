@@ -63,7 +63,7 @@ AS.night = function(y, m, d, lat, lon){
   if (CACHE[key]) return CACHE[key];
   var t0 = noonMs(y, m, d), STEP = 5 * 60000, N = 288;
   var dusk = null, dawn = null, mrise = null, mset = null, prevUp = null, dark = 0, gcDark = 0, gcFrom = null, gcTo = null, darkFrom = null, darkTo = null;
-  var mid = AS.moonPhase(t0 + 12 * 3600000);
+  var mid = AS.moonPhase(t0 + 12 * 3600000), SA = [], MA = [], GA = [];
   for (var i = 0; i <= N; i++){
     var ms = t0 + i * STEP, J = jd(ms), s = sun(J), mo = moon(J);
     var sa = alt(J, lat, lon, s.ra, s.dec);
@@ -71,18 +71,20 @@ AS.night = function(y, m, d, lat, lon){
     var up = ma > -.6;
     if (prevUp !== null && up !== prevUp){ if (up && mrise === null) mrise = ms; if (!up && mset === null) mset = ms; }
     prevUp = up;
+    var gaN = alt(J, lat, lon, GC.ra, GC.dec);
+    SA.push(Math.round(sa * 10) / 10); MA.push(Math.round(ma * 10) / 10); GA.push(Math.round(gaN * 10) / 10);
     var astroDark = sa < -18;
     if (astroDark){ if (dusk === null) dusk = ms; dawn = ms; }
     var moonless = !up || mid.illum < .06;
     if (astroDark && moonless && i < N){
       dark += 5; if (darkFrom === null) darkFrom = ms; darkTo = ms + STEP;
-      var ga = alt(J, lat, lon, GC.ra, GC.dec);
-      if (ga > 10){ gcDark += 5; if (gcFrom === null) gcFrom = ms; gcTo = ms + STEP; }
+      if (gaN > 10){ gcDark += 5; if (gcFrom === null) gcFrom = ms; gcTo = ms + STEP; }
     }
   }
   var r = {y:y, m:m, d:d, illum:mid.illum, waxing:mid.waxing, age:mid.age, phase:AS.phaseName(mid.age),
     dusk:dusk, dawn:dawn, nightH:dusk ? (dawn - dusk) / 3600000 : 0, mrise:mrise, mset:mset,
-    darkH:dark / 60, darkFrom:darkFrom, darkTo:darkTo, gcH:gcDark / 60, gcFrom:gcFrom, gcTo:gcTo};
+    darkH:dark / 60, darkFrom:darkFrom, darkTo:darkTo, gcH:gcDark / 60, gcFrom:gcFrom, gcTo:gcTo,
+    t0:t0, step:STEP, samp:{sun:SA, moon:MA, gc:GA}};   // samp：當天中午起每 5 分鐘的太陽／月亮／銀河中心高度（度），給逐小時時間軸用
   CACHE[key] = r;
   return r;
 };

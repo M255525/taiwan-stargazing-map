@@ -136,6 +136,31 @@ a{color:var(--sky)}
 .nbox dt{color:var(--mute)}.nbox dd{margin:0;color:var(--ink)}
 .nbox dd b{color:var(--gold2)}
 :root[data-theme="light"] .nbox dd b{color:#7a5c16}
+/* 今晚逐小時時間軸 */
+.tl{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr;gap:2px 6px;align-items:center;margin-top:4px;font-size:10.5px;color:var(--mute)}
+.tl .bar{position:relative;height:9px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.05)}
+:root[data-theme="light"] .tl .bar{background:rgba(30,40,90,.08)}
+.tl .bar svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.tl .now{position:absolute;top:-2px;bottom:-2px;width:2px;margin-left:-1px;background:var(--red);border-radius:1px}
+.tl .ticks{position:relative;height:13px}
+.tl .ticks span{position:absolute;top:0;transform:translateX(-50%);font-size:10px;white-space:nowrap}
+.tl .ticks span:first-child{transform:none}.tl .ticks span:last-child{transform:translateX(-100%)}
+.tlnote{grid-column:1/-1;font-size:10.5px;color:var(--mute);line-height:1.5}
+.tlnote i{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:-1px;margin:0 2px 0 6px}
+.tlnote i:first-child{margin-left:0}
+/* 分享、行事曆、推薦夜晚 */
+.acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.abtn{border:1px solid var(--edge);background:rgba(230,195,106,.12);color:var(--gold2);border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:700}
+:root[data-theme="light"] .abtn{color:#7a5c16}
+.cands{display:flex;flex-wrap:wrap;gap:5px;margin-top:3px}
+.cand{border:0;border-radius:8px;padding:4px 9px;font-size:12px;font-weight:700;color:#0b1028;display:inline-flex;align-items:center;gap:4px}
+.cand small{font-weight:400;opacity:.8}
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);z-index:2000;background:#141d40;color:#f3dc9a;border:1px solid rgba(230,195,106,.5);border-radius:10px;padding:8px 14px;font-size:13.5px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;max-width:calc(100% - 32px);text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+/* 紅光夜視模式：用相乘混色把整個畫面（含 3D 地圖、對話框）壓成暗紅色 */
+#redveil{position:fixed;inset:0;z-index:99999;pointer-events:none;background:#b80000;mix-blend-mode:multiply;display:none}
+html.redlight #redveil{display:block}
+#btnRed.on{background:#a01010;color:#ffd0c8}
 .shower{margin-top:6px;font-size:12.5px;line-height:1.55;color:#ffe2b0;background:rgba(255,140,60,.12);border:1px solid rgba(255,160,80,.35);border-radius:8px;padding:5px 9px}
 :root[data-theme="light"] .shower{color:#6a3a10}
 .wxrow{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;align-items:center}
@@ -297,7 +322,10 @@ button.chip:hover,a.chip:hover{border-color:var(--gold);color:var(--gold)}
 <div id="mode" class="ui card-ui" aria-label="顯示">
   <button class="mbtn" id="btnLayer" type="button" title="地圖上顯示城市光害光暈（示意）">💡 光害圖層</button>
   <button class="mbtn" id="btnNext" type="button" title="往後找下一個無月暗夜 6 小時以上、有觀星點指數 5 的晚上">🌑 下一個好夜晚</button>
+  <button class="mbtn" id="btnRed" type="button" aria-pressed="false" title="紅光夜視模式：整個畫面變暗紅色，在觀星現場看手機不會破壞眼睛的暗適應">🔴 紅光</button>
 </div>
+<div id="redveil" aria-hidden="true"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <aside id="panel" class="ui card-ui" aria-label="觀星點">
   <button id="sheetBtn" type="button">收合</button>
@@ -371,6 +399,9 @@ button.chip:hover,a.chip:hover{border-color:var(--gold);color:var(--gold)}
         <select id="setMotion"><option value="auto">跟隨系統</option><option value="full">完整動畫</option><option value="reduce">減少動態</option></select></div></details>
     <details class="set-sec" data-sec="play"><summary><span>▶ 自動播放速度</span><em id="sv-play"></em></summary>
       <div class="set-body"><select id="setPlay"><option value="1500">慢（每 1.5 秒一天）</option><option value="900">標準（每 0.9 秒一天）</option><option value="450">快（每 0.45 秒一天）</option></select></div></details>
+    <details class="set-sec" data-sec="red"><summary><span>🔴 紅光夜視模式</span><em id="sv-red"></em></summary>
+      <div class="set-body">到了觀星現場再打開：整個畫面變成暗紅色，看手機時眼睛不用重新適應黑暗（約需 20～30 分鐘）。手機亮度也請調到最低。
+        <label class="ck"><input type="checkbox" id="setRed"> 開啟紅光模式（上方「🔴 紅光」按鈕也可以切換）</label></div></details>
     <details class="set-sec" data-sec="theme"><summary><span>🎨 介面配色</span><em id="sv-theme"></em></summary>
       <div class="set-body"><select id="setTheme"><option value="auto">夜空星圖（預設）</option><option value="dark">夜空星圖</option><option value="light">紙本星圖（淺色面板）</option></select></div></details>
     <details class="set-sec" data-sec="about"><summary><span>ℹ 關於本工具</span><em>手冊・警語・創作者</em></summary>
